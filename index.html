@@ -547,9 +547,17 @@
                   can still improve.
                   <br /><br />
                   In this project, I ask whether low rank is truly causal, or whether it is instead
-                  a by-product of optimization converging to simple low-norm solutions. My working
-                  hypothesis is that low rank is strongly correlated with such solutions, but is not
-                  itself the mechanism behind generalization.
+                  a by-product of optimization converging to simple explanations of the data. My
+                  working hypothesis is that the implicit bias of current optimization algorithms is
+                  toward such simple solutions, which often coincide with low-rank structure but
+                  need not be low rank in general.
+                  <br /><br />
+                  My goal is to formalize this notion of simplicity and disentangle it from low
+                  effective rank in order to better understand the causal role of low rank in
+                  generalization. More broadly, this could suggest new optimization mechanisms with
+                  an implicit or explicit bias toward solutions that generalize well without
+                  directly constraining rank, potentially increasing the available degrees of
+                  freedom without unnecessarily restricting model expressivity.
                 </span>
               </li>
               <li>
@@ -586,15 +594,29 @@
               </p>
 
               <p>
-                I found the existing explanations in the literature unsatisfying, often incomplete,
-                fragmented, or even contradictory. Rather than accept this, I decided to approach
-                these questions directly. I am now focused on developing a mathematically grounded
-                understanding of training dynamics, implicit bias, and generalization in modern
-                machine learning, with the goal of connecting optimization, model structure, and
-                data assumptions into a unified theory.
+                The literature on generalization is often split into distinct schools of thought,
+                each built to explain a particular set of observations but often struggling to
+                account for others. This includes views based on implicit bias toward low-norm
+                solutions, interpolation-based explanations of phenomena such as double descent,
+                and perspectives on generative models in which structured errors are essential for
+                generalization. While each of these frameworks captures part of the picture, they
+                often remain difficult to reconcile with one another, and no single account seems
+                to explain the full range of behaviors observed in modern machine learning.
+                <br /><br />
+                Although my research experience so far has been almost entirely applied, working on
+                these problems made me realize that I am far more interested in the fundamental
+                principles that govern learning itself than in using machine learning as a
+                tool for scientific applications. This has led to a deliberate shift in my
+                interests toward training dynamics, implicit bias, and generalization in modern
+                machine learning, with the goal of developing a more mathematically grounded
+                understanding of how optimization, model structure, and data assumptions interact.
+                I am especially interested in being in an environment where I can pursue this
+                transition seriously and learn from strong researchers working on these questions.
               </p>
 
-              <p>Outside of research, I enjoy reading, snowboarding, and surfing.</p>
+              <p> Outside of research, I enjoy reading, snowboarding, and surfing. If an activity comes with no risk of breaking a leg, it is probably not worth my time.
+                  Except for reading. Reading is awesome.
+              </p>
             </div>
           </section>
 
