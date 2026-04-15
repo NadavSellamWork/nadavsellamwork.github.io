@@ -1,1 +1,0 @@
-I am interested in moving from predominantly application-driven work toward questions about why learning systems work, how they train, and when they generalize.

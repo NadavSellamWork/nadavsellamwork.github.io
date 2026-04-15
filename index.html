@@ -157,15 +157,11 @@
 
       .eyebrow {
         display: inline-block;
-        margin-bottom: 16px;
-        padding: 6px 12px;
-        border-radius: 999px;
-        border: 1px solid rgba(15, 118, 110, 0.18);
-        background: rgba(15, 118, 110, 0.08);
+        margin-bottom: 10px;
         color: var(--accent-deep);
-        font-size: 0.82rem;
-        letter-spacing: 0.08em;
-        text-transform: uppercase;
+        font-size: 1rem;
+        font-weight: 600;
+        letter-spacing: 0.01em;
       }
 
       h1 {
@@ -173,6 +169,13 @@
         font-size: clamp(3rem, 7vw, 5rem);
         line-height: 0.96;
         letter-spacing: -0.04em;
+      }
+
+      .identity {
+        margin: 10px 0 0;
+        color: var(--muted);
+        font-size: 1.02rem;
+        line-height: 1.6;
       }
 
       .lead {
@@ -227,6 +230,27 @@
         padding: 30px;
       }
 
+      .statement-section {
+        padding: 6px 10px 2px;
+      }
+
+      .statement-heading {
+        margin: 0 0 14px;
+        color: var(--accent-deep);
+        font-size: 0.95rem;
+        font-weight: 700;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+      }
+
+      .statement-text {
+        max-width: 72ch;
+        margin: 0;
+        font-size: 1.1rem;
+        line-height: 1.95;
+        color: #2d3a35;
+      }
+
       .content .section-card:last-child {
         margin-bottom: 0;
       }
@@ -245,6 +269,33 @@
 
       .section-card p:last-child {
         margin-bottom: 0;
+      }
+
+      .bullet-list {
+        margin: 0;
+        padding: 0;
+        list-style: none;
+        color: #33413b;
+      }
+
+      .bullet-list li {
+        margin: 0 0 18px;
+        line-height: 1.8;
+      }
+
+      .bullet-list li:last-child {
+        margin-bottom: 0;
+      }
+
+      .project-title {
+        display: block;
+        margin-bottom: 4px;
+        color: var(--text);
+        font-size: 1.02rem;
+      }
+
+      .project-text {
+        color: var(--muted);
       }
 
       .info-list {
@@ -316,10 +367,6 @@
         font-size: 0.95rem;
       }
 
-      .loading-text {
-        opacity: 0.85;
-      }
-
       #publications {
         padding-bottom: 20px;
       }
@@ -363,6 +410,16 @@
           padding: 22px;
         }
 
+        .statement-section {
+          padding-left: 4px;
+          padding-right: 4px;
+        }
+
+        .statement-text {
+          font-size: 1.04rem;
+          line-height: 1.85;
+        }
+
         .info-row {
           grid-template-columns: 1fr;
           gap: 6px;
@@ -402,10 +459,10 @@
     <main class="page">
       <div class="site-shell">
         <div class="site-topbar">
-          <p class="site-title loading-text" data-text-src="content/site-name.txt">Nadav Bojan Sellam</p>
+          <p class="site-title">Nadav Bojan Sellam</p>
           <nav class="site-nav" aria-label="Primary">
             <a href="#about">About</a>
-            <a href="#research">Research</a>
+            <a href="#ongoing-research">Research</a>
             <a href="#publications">Publications</a>
           </nav>
         </div>
@@ -417,14 +474,22 @@
             </div>
 
             <div>
-              <span class="eyebrow loading-text" data-text-src="content/eyebrow.txt">
-                Machine Learning Theory · Dynamics · Generalization · AI for Science
-              </span>
-              <h1 class="loading-text" data-text-src="content/site-name.txt">Nadav Bojan Sellam</h1>
-              <p class="lead loading-text" data-text-src="content/lead.txt">
-                I work on machine learning with growing emphasis on theory, optimization dynamics,
-                and generalization. My past work has focused mostly on applied problems in structural
-                biology, with some additional exposure to astrophysics and scientific modeling.
+              <h1>Nadav Bojan Sellam</h1>
+              <p class="identity">
+                PhD student (rotation) @
+                <a href="https://ista.ac.at/de/home/" target="_blank" rel="noreferrer">ISTA</a>
+                ⸱
+                <a href="https://ellis.eu/" target="_blank" rel="noreferrer">ELLIS</a>
+              </p>
+              <span class="eyebrow">Interested in ML theory, training dynamics and generalization</span>
+              <p class="lead">
+                I study the training dynamics that govern generalization,
+                and how theoretical insights can explain empirical phenomena such as double descent,
+                grokking, loss of plasticity, and weight-space interpolation.
+              </p>
+              <p class="lead">
+                My recent work focuses on generative modeling for scientific data, including protein
+                structure modeling and inference under correlated observations.
               </p>
 
               <div class="actions">
@@ -449,14 +514,22 @@
         </section>
 
         <div class="content">
+          <section class="statement-section" id="research-statement">
+            <h2 class="statement-heading">Short Research Statement</h2>
+            <p class="statement-text">
+              I am interested in developing mathematically rigorous foundations for modern machine learning, with a focus on how training dynamics give rise to generalization.<br /><br />
+              My goal is to build and unify theories that explain diverse empirical phenomena observed in practice, and to leverage these insights to design more efficient and robust learning algorithms.
+            </p>
+          </section>
+
           <section class="section-card" id="about">
             <h2 class="section-heading">About</h2>
-            <p class="loading-text" data-text-src="content/about-1.txt">
+            <p>
               I work at the intersection of machine learning, structural biology, and computational
               modeling, with a focus on methods that connect experimental observations to richer
               representations of protein structure and dynamics.
             </p>
-            <p class="loading-text" data-text-src="content/about-2.txt">
+            <p>
               My interests include inverse problems in biology, generative modeling for protein
               ensembles, and representation learning for complex molecular systems. I am especially
               interested in approaches that stay grounded in physical measurements while still scaling
@@ -464,28 +537,32 @@
             </p>
           </section>
 
-          <section class="section-card" id="research">
-            <h2 class="section-heading">Research Profile</h2>
-            <div class="info-list">
-              <div class="info-row">
-                <div class="info-label">Focus</div>
-                <div class="loading-text" data-text-src="content/research-focus.txt">
-                  Machine learning theory, training dynamics, and generalization, especially in scientifically grounded settings.
-                </div>
-              </div>
-              <div class="info-row">
-                <div class="info-label">Interests</div>
-                <div class="loading-text" data-text-src="content/research-interests.txt">
-                  Optimization in deep learning, implicit bias, representation learning, generalization, and the interface between theory and modern practice.
-                </div>
-              </div>
-              <div class="info-row">
-                <div class="info-label">Approach</div>
-                <div class="loading-text" data-text-src="content/research-approach.txt">
-                  I am interested in moving from predominantly application-driven work toward questions about why learning systems work, how they train, and when they generalize.
-                </div>
-              </div>
-            </div>
+          <section class="section-card" id="ongoing-research">
+            <h2 class="section-heading">Ongoing Research</h2>
+            <ul class="bullet-list">
+              <li>
+                <strong class="project-title">
+                  Towards a Causal Understanding of Low-Rank Structure and Generalization in Deep
+                  Learning
+                </strong>
+                <span class="project-text">
+                  A project aimed at understanding whether low rank is a driving factor behind
+                  generalization or merely a symptom of it, whether generalization can occur
+                  without low rank, and whether the implicit bias of modern optimizers gives rise
+                  to both low rank and generalization without a direct causal order between them.
+                </span>
+              </li>
+              <li>
+                <strong class="project-title">
+                  Correcting the Null Hypothesis of AGN Light Curves using Generative Models
+                </strong>
+                <span class="project-text">
+                  Repurposing continuous normalizing flows to learn the correct noise distribution
+                  from active galactic nuclei, with the goal of improving detection of exotic supermassive black
+                  hole dynamics.
+                </span>
+              </li>
+            </ul>
           </section>
 
           <section class="section-card" id="publications">
@@ -533,8 +610,8 @@
                 <span>
                   Sai Advaith Maddipatla*, <strong>Nadav Bojan Sellam*</strong>, Meital Bojan*,
                   Sanketh Vedula, Paul Schanda, Ailie Marx, Alex M. Bronstein.<br />
-                  Published in the
-                  Proceedings of the 42nd International Conference on Machine Learning (ICML 2025).
+                  Published in the Proceedings of the 42nd International Conference on Machine
+                  Learning (ICML 2025).
                 </span>
               </li>
               <li class="pub-item">
@@ -550,8 +627,8 @@
                 <span>
                   Sai Advaith Maddipatla*, <strong>Nadav Bojan Sellam*</strong>, Sanketh Vedula,
                   Ailie Marx, Alex M. Bronstein.<br />
-                  Presented at the Machine Learning in Structural
-                  Biology (MLSB) workshop at NeurIPS 2024.
+                  Presented at the Machine Learning in Structural Biology (MLSB) workshop at
+                  NeurIPS 2024.
                 </span>
               </li>
             </ol>
@@ -560,37 +637,5 @@
         </div>
       </div>
     </main>
-    <script>
-      const textTargets = document.querySelectorAll("[data-text-src]");
-
-      async function loadTextContent() {
-        await Promise.all(
-          Array.from(textTargets, async (element) => {
-            const response = await fetch(element.dataset.textSrc);
-            if (!response.ok) return;
-            const text = (await response.text()).trim();
-            if (!text) return;
-            element.textContent = text;
-            element.classList.remove("loading-text");
-          })
-        );
-
-        const siteName = document.querySelector("[data-text-src='content/site-name.txt']")?.textContent.trim();
-        if (!siteName) return;
-
-        document.title = siteName;
-        const description = document.querySelector("meta[name='description']");
-        if (description) {
-          description.setAttribute("content", `Personal academic website for ${siteName}.`);
-        }
-
-        const portrait = document.getElementById("portrait-image");
-        if (portrait) {
-          portrait.alt = `Portrait of ${siteName}`;
-        }
-      }
-
-      loadTextContent().catch(() => {});
-    </script>
   </body>
 </html>

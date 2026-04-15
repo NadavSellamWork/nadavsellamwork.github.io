@@ -1,1 +1,0 @@
-Optimization in deep learning, implicit bias, representation learning, generalization, and the interface between theory and modern practice.

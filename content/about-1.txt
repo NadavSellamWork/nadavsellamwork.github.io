@@ -1,1 +1,0 @@
-I work at the intersection of machine learning, structural biology, and computational modeling, with a focus on methods that connect experimental observations to richer representations of protein structure and dynamics.

@@ -1,1 +1,0 @@
-Machine learning theory, training dynamics, and generalization, especially in scientifically grounded settings.

@@ -1,1 +1,0 @@
-My interests include inverse problems in biology, generative modeling for protein ensembles, and representation learning for complex molecular systems. I am especially interested in approaches that stay grounded in physical measurements while still scaling with modern machine learning tools.

@@ -1,1 +1,0 @@
-I work on machine learning with growing emphasis on theory, optimization dynamics, and generalization. My past work has focused mostly on applied problems in structural biology, with some additional exposure to astrophysics and scientific modeling.
