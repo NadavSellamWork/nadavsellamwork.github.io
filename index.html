@@ -487,11 +487,14 @@
               </p>
               <span class="eyebrow">Interested in ML theory, training dynamics and generalization</span>
               <p class="lead">
-                I work on machine learning theory.
+                I work on machine learning theory, especially questions about how
+                optimization selects solutions and how those choices shape
+                generalization.
               </p>
               <p class="lead">
-                My background is in scientific machine learning, especially generative modeling
-                and inference for protein structure under correlated experimental observations.
+                My background is in scientific machine learning, where I worked on generative
+                modeling and inference for protein structure under correlated experimental
+                observations.
               </p>
 
               <div class="actions">
@@ -522,18 +525,19 @@
               I want to understand how optimization selects solutions in highly
               overparameterized models, and how this selection gives rise to
               generalization.<br /><br />
-              The literature on generalization is often split into frameworks that explain
-              particular phenomena in isolation, but do not fit together into a coherent
+              Much of the literature on generalization is split into frameworks that explain
+              particular phenomena in isolation but do not fit together into a coherent
               account of modern machine learning. This includes perspectives based on
-              implicit bias toward low-norm solutions, interpolation-based
-              explanations of phenomena such as double descent, and views of generative
-              modeling in which structured errors are essential for good performance. Each of
-              these captures part of the picture, but none seems to explain the full range of
-              behaviors observed in overparameterized systems.<br /><br />
-              I am interested in developing theoretical frameworks that connect optimization
-              dynamics, model parameterization, and data structure, with the goal of
-              explaining these phenomena within a common picture rather than treating them as
-              separate effects.
+              implicit bias toward low-norm solutions, interpolation-based explanations of
+              phenomena such as double descent, and views of generative modeling in which
+              structured errors are essential for good performance. Each of these captures
+              part of the picture, but none seems to explain the full range of behaviors
+              observed in overparameterized systems.<br /><br />
+              My goal is to mathematically characterize when and how generalization occurs
+              across different settings, and to develop frameworks that distinguish which
+              observed phenomena are genuine causes of generalization, which are
+              consequences of optimization, and which are different expressions of the same
+              underlying mechanism.
             </p>
           </section>
 
@@ -571,9 +575,19 @@
                   Correcting the Null Hypothesis of AGN Light Curves using Generative Models
                 </strong>
                 <span class="project-text">
-                  Repurposing continuous normalizing flows to learn the correct noise distribution
-                  from active galactic nuclei, with the goal of improving detection of exotic
-                  supermassive black hole dynamics.
+                  In astrophysics, hidden signals in highly noisy AGN (Actiave Galactic Noucli) light curves are often
+                  detected by assuming a red-noise model, proposing a candidate signal, and then
+                  estimating how likely that signal is to arise as a noise artifact by simulating
+                  from the assumed null model. If that noise model is wrong, even within a
+                  particular family of objects, both detection quality and statistical power can
+                  degrade substantially.
+                  <br /><br />
+                  In this project, I instead learn the noise distribution directly from
+                  observations using continuous normalizing flows. The goal is not to generate the
+                  data itself, but to generate realistic noise under the null hypothesis. This
+                  requires a different approach from standard generative modeling, since in the
+                  conditional setting the relevant posterior is substantially broader than in the
+                  usual data generation setting.
                 </span>
               </li>
             </ul>
