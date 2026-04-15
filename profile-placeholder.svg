@@ -1,0 +1,38 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 1000" role="img" aria-labelledby="title desc">
+  <title id="title">Profile placeholder</title>
+  <desc id="desc">Abstract placeholder portrait illustration.</desc>
+  <defs>
+    <linearGradient id="bg" x1="0" x2="1" y1="0" y2="1">
+      <stop offset="0%" stop-color="#dfe8e0" />
+      <stop offset="100%" stop-color="#f5e8cf" />
+    </linearGradient>
+    <linearGradient id="shape" x1="0" x2="1" y1="0" y2="1">
+      <stop offset="0%" stop-color="#0f766e" />
+      <stop offset="100%" stop-color="#114e49" />
+    </linearGradient>
+  </defs>
+  <rect width="800" height="1000" fill="url(#bg)" />
+  <circle cx="400" cy="280" r="152" fill="#f7fbfa" opacity="0.75" />
+  <path
+    d="M237 823c0-102 73-183 163-183s163 81 163 183"
+    fill="#f7fbfa"
+    opacity="0.9"
+  />
+  <circle cx="400" cy="314" r="130" fill="url(#shape)" opacity="0.92" />
+  <path
+    d="M240 816c24-103 92-165 160-165 74 0 142 62 160 165"
+    fill="url(#shape)"
+    opacity="0.92"
+  />
+  <text
+    x="400"
+    y="944"
+    fill="#114e49"
+    font-family="Georgia, serif"
+    font-size="42"
+    text-anchor="middle"
+    letter-spacing="6"
+  >
+    YOUR PHOTO HERE
+  </text>
+</svg>
