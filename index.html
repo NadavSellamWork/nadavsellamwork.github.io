@@ -480,7 +480,7 @@
             <div>
               <h1>Nadav Bojan Sellam</h1>
               <p class="identity">
-                PhD student (unaffiliated) @
+                PhD student @
                 <a href="https://ista.ac.at/de/home/" target="_blank" rel="noreferrer">ISTA</a>
                 ⸱
                 <a href="https://ellis.eu/" target="_blank" rel="noreferrer">ELLIS</a>
@@ -551,23 +551,19 @@
                 </strong>
                 <span class="project-text">
                   Current literature often treats low effective rank and neural collapse as causes
-                  of generalization, arising through the implicit bias of optimization. However,
-                  this picture does not account well for settings such as weight interpolation,
-                  where effective rank can increase, neural collapse can break, and generalization
-                  can still improve.
+                  of generalization. But this picture does not fit settings such as weight
+                  interpolation, where effective rank can increase, neural collapse can break, and
+                  generalization can still improve.
                   <br /><br />
-                  In this project, I ask whether low rank is truly causal, or whether it is instead
-                  a by-product of optimization converging to simple explanations of the data. My
-                  working hypothesis is that the implicit bias of current optimization algorithms is
-                  toward such simple solutions, which often coincide with low-rank structure but
-                  need not be low rank in general.
+                  In a synthetic setting, I show that a tailored training regime can produce
+                  models with higher effective rank that consistently outperform fully converged
+                  neural networks with lower effective rank. This raises the question of whether
+                  low rank is truly causal for generalization, or whether it is only correlated
+                  with the mechanisms that matter.
                   <br /><br />
                   My goal is to formalize this notion of simplicity and disentangle it from low
-                  effective rank in order to better understand the causal role of low rank in
-                  generalization. More broadly, this could suggest new optimization mechanisms with
-                  an implicit or explicit bias toward solutions that generalize well without
-                  directly constraining rank, potentially increasing the available degrees of
-                  freedom without unnecessarily restricting model expressivity.
+                  effective rank, with the broader aim of identifying optimization mechanisms that
+                  favor generalizing solutions without directly constraining rank.
                 </span>
               </li>
               <li>
@@ -575,19 +571,21 @@
                   Correcting the Null Hypothesis of AGN Light Curves using Generative Models
                 </strong>
                 <span class="project-text">
-                  In astrophysics, hidden signals in highly noisy AGN (Actiave Galactic Noucli) light curves are often
-                  detected by assuming a red-noise model, proposing a candidate signal, and then
-                  estimating how likely that signal is to arise as a noise artifact by simulating
-                  from the assumed null model. If that noise model is wrong, even within a
-                  particular family of objects, both detection quality and statistical power can
-                  degrade substantially.
+                  In astrophysics, hidden signals in highly noisy AGN (Active Galactic Nuclei)
+                  light curves are often detected by assuming a red-noise model, proposing a
+                  candidate signal, and then estimating how likely that signal is to arise as a
+                  noise artifact by simulating from the assumed null model. If that assumption is
+                  wrong, even within a particular family of objects, both detection quality and
+                  statistical power can degrade substantially.
                   <br /><br />
                   In this project, I instead learn the noise distribution directly from
                   observations using continuous normalizing flows. The goal is not to generate the
-                  data itself, but to generate realistic noise under the null hypothesis. This
-                  requires a different approach from standard generative modeling, since in the
-                  conditional setting the relevant posterior is substantially broader than in the
-                  usual data generation setting.
+                  data itself, but to generate realistic noise under the null hypothesis.
+                  <br /><br />
+                  I show that a naive conditional training regime underperforms for this task,
+                  and introduce a new objective that jointly supports generation and the broader
+                  conditional posterior. This improves performance to the point of matching the
+                  case where the correct noise model is known in advance.
                 </span>
               </li>
             </ul>
