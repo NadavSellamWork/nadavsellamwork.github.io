@@ -231,24 +231,24 @@
       }
 
       .statement-section {
-        padding: 6px 10px 2px;
+        padding: 10px 12px 6px 22px;
+        border-left: 3px solid rgba(15, 118, 110, 0.32);
       }
 
       .statement-heading {
-        margin: 0 0 14px;
+        margin: 0 0 16px;
         color: var(--accent-deep);
-        font-size: 0.95rem;
+        font-size: 1.42rem;
         font-weight: 700;
-        letter-spacing: 0.08em;
-        text-transform: uppercase;
+        letter-spacing: 0.04em;
       }
 
       .statement-text {
         max-width: 72ch;
         margin: 0;
-        font-size: 1.1rem;
-        line-height: 1.95;
-        color: #2d3a35;
+        font-size: 1.2rem;
+        line-height: 2.02;
+        color: #1f2c27;
       }
 
       .content .section-card:last-child {
@@ -273,13 +273,12 @@
 
       .bullet-list {
         margin: 0;
-        padding: 0;
-        list-style: none;
+        padding-left: 1.2rem;
         color: #33413b;
       }
 
       .bullet-list li {
-        margin: 0 0 18px;
+        margin: 0 0 12px;
         line-height: 1.8;
       }
 
@@ -411,13 +410,13 @@
         }
 
         .statement-section {
-          padding-left: 4px;
+          padding-left: 14px;
           padding-right: 4px;
         }
 
         .statement-text {
-          font-size: 1.04rem;
-          line-height: 1.85;
+          font-size: 1.1rem;
+          line-height: 1.92;
         }
 
         .info-row {
@@ -483,13 +482,14 @@
               </p>
               <span class="eyebrow">Interested in ML theory, training dynamics and generalization</span>
               <p class="lead">
-                I study the training dynamics that govern generalization,
-                and how theoretical insights can explain empirical phenomena such as double descent,
-                grokking, loss of plasticity, and weight-space interpolation.
+                I am interested in the mathematical foundations of modern machine learning,
+                especially how optimization, model structure, and data assumptions shape
+                generalization in overparameterized systems.
               </p>
               <p class="lead">
-                My recent work focuses on generative modeling for scientific data, including protein
-                structure modeling and inference under correlated observations.
+                My recent work has been in scientific machine learning, where I developed
+                generative and inference methods for protein structure under correlated
+                experimental observations.
               </p>
 
               <div class="actions">
@@ -517,9 +517,13 @@
           <section class="statement-section" id="research-statement">
             <h2 class="statement-heading">Short Research Statement</h2>
             <p class="statement-text">
-              I am interested in developing mathematically rigorous foundations for modern machine learning, with a focus on how training dynamics give rise to generalization.<br /><br />
-              My goal is to build and unify theories that explain diverse empirical phenomena observed in practice, and to leverage these insights to design more efficient and robust learning algorithms.
-            </p>
+            I am interested in understanding how learning algorithms select solutions in
+            highly overparameterized models, and how this selection determines
+            generalization.<br /><br />
+            More broadly, I want to develop theoretical frameworks that connect
+            optimization dynamics, model parameterization, and data structure to the
+            behavior observed in modern machine learning systems.
+          </p>
           </section>
 
           <section class="section-card" id="about">
@@ -558,8 +562,8 @@
                 </strong>
                 <span class="project-text">
                   Repurposing continuous normalizing flows to learn the correct noise distribution
-                  from active galactic nuclei, with the goal of improving detection of exotic supermassive black
-                  hole dynamics.
+                  from active galactic nuclei, with the goal of improving detection of exotic
+                  supermassive black hole dynamics.
                 </span>
               </li>
             </ul>
