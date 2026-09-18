@@ -483,22 +483,15 @@
 
             <div>
               <h1>Nadav Bojan Sellam</h1>
-              <p class="identity">
-                PhD student @
-                <a href="https://ista.ac.at/de/home/" target="_blank" rel="noreferrer">ISTA</a>
-                ⸱
-                <a href="https://ellis.eu/" target="_blank" rel="noreferrer">ELLIS</a>
-              </p>
-              <span class="eyebrow">Interested in ML theory, training dynamics and generalization</span>
+              <span class="eyebrow">Interested in learning dynamics, representations, and generalization</span>
               <p class="lead">
-                I work on machine learning theory, especially questions about how
-                optimization selects solutions and how those choices shape
-                generalization.
+                I want to understand how training dynamics and architecture shape what neural
+                networks learn: how representations and computations emerge, and what enables
+                them to generalize.
               </p>
               <p class="lead">
-                My background is in scientific machine learning, where I worked on generative
-                modeling and inference for protein structure under correlated experimental
-                observations.
+                My goal is to use this understanding to design better learning algorithms and
+                improve our ability to interpret and control models.
               </p>
 
               <div class="actions">
@@ -526,22 +519,24 @@
           <section class="statement-section" id="research-statement">
             <h2 class="statement-heading">Short Research Statement</h2>
             <p class="statement-text">
-              I want to understand how optimization selects solutions in highly
-              overparameterized models, and how this selection gives rise to
-              generalization.<br /><br />
-              Much of the literature on generalization is split into frameworks that explain
-              particular phenomena in isolation but do not fit together into a coherent
-              account of modern machine learning. This includes perspectives based on
-              implicit bias toward low-norm solutions, interpolation-based explanations of
-              phenomena such as double descent, and views of generative modeling in which
-              structured errors are essential for good performance. Each of these captures
-              part of the picture, but none seems to explain the full range of behaviors
-              observed in overparameterized systems.<br /><br />
-              My goal is to mathematically characterize when and how generalization occurs
-              across different settings, and to develop frameworks that distinguish which
-              observed phenomena are genuine causes of generalization, which are
-              consequences of optimization, and which are different expressions of the same
-              underlying mechanism.
+              I want to understand how the dynamics of training give rise to the representations
+              and computations learned by neural networks. How do optimization, architecture,
+              and the structure of the data interact to determine what a model learns? How can
+              we use this understanding to design better algorithms and gain more control over
+              model behavior?<br /><br />
+              I am particularly interested in connecting the equations governing training to
+              the emergence of structure inside a model. For example, can we explain when a
+              feature is learned, how it develops across layers, and why it takes a particular
+              representational form? My approach is to study these questions through simplified
+              mathematical models and stochastic descriptions of learning, with particular
+              attention to how interactions between different parts of a network shape its
+              overall dynamics.<br /><br />
+              I see theoretical analysis and experiments as complementary. A useful theory
+              should identify quantities we can measure and predict what happens when we change
+              the training procedure, architecture, or data. Experiments can then test these
+              predictions and reveal which mechanisms matter in practice. My broader aim is to
+              turn these insights into better training algorithms, principled interpretability
+              tools, and more predictable and controllable models.
             </p>
           </section>
 
@@ -599,31 +594,30 @@
             <h2 class="section-heading">Bio</h2>
             <div class="bio-copy">
               <p>
-                I am a PhD student in computer science at ISTA and an ELLIS scholar. I completed
-                my BSc and MSc in computer science at the Technion, where I did my master's with
-                Prof. Alex Bronstein on machine learning for scientific applications.
+                I completed my BSc and MSc in computer science at the Technion, where I worked
+                with Prof. Alex Bronstein on machine learning for scientific applications.
+                Following my studies, I spent a year conducting research at
+                <a href="https://ista.ac.at/" target="_blank" rel="noreferrer">ISTA</a>.
               </p>
 
               <p>
-                My earlier research focused on generative modeling and probabilistic inference in
-                biology and physics. In particular, I worked on protein structure modeling under
-                experimental constraints, as well as on learning and inference in settings with
-                strong dependencies and non-i.i.d. sampling, where observations are correlated
-                rather than independently drawn. These problems pushed me toward more fundamental
-                questions about learning, especially in settings where standard assumptions break
-                down and existing intuitions become less convincing.
+                My research so far has focused on generative modeling and probabilistic inference
+                in biology and physics, including protein structure modeling under experimental
+                constraints and learning from correlated observations. Working on these problems
+                drew me toward questions about learning itself: how models acquire useful
+                representations, what determines their behavior, and why they generalize.
               </p>
               <p>
-                Although my work so far has been largely applied, it made clear to me that I am
-                more interested in the principles governing learning itself than in machine
-                learning purely as a tool for scientific applications. My research direction is
-                now firmly centered on foundational questions in modern machine learning, and I
-                am looking for an environment where I can pursue them in close collaboration with
-                researchers in the area.
+                My current interests center on training dynamics, representation learning, and
+                the foundations of deep learning. I am drawn to problems where mathematical
+                analysis and experiments can inform each other, and where understanding a
+                learning mechanism can suggest a better way to train or use a model.
               </p>
 
-              <p> Outside of research, I enjoy reading books, snowboarding, and surfing. If an activity comes with no risk of breaking a leg, it is probably not worth my time.
-                  Except for books. books are awesome.
+              <p>
+                Outside of research, I enjoy reading books, snowboarding, and surfing. If an
+                activity comes with no risk of breaking a leg, it is probably not worth my time.
+                Except for books. Books are awesome.
               </p>
             </div>
           </section>
@@ -671,9 +665,9 @@
                   >
                 </strong>
                 <span>
-                  Sai Advaith Maddipatla*, <strong>Nadav Bojan Sellam*</strong>, Meital Bojan*,
+                  <strong>Nadav Bojan Sellam*</strong>, Sai Advaith Maddipatla*, Meital Bojan*,
                   Sanketh Vedula, Paul Schanda, Ailie Marx, Alex M. Bronstein.<br />
-                  Spotlight at the GEM workshop at ICLR 2025; accepted to ICML 2025.
+                  Spotlight at the GEM workshop at ICLR 2025; accepted to ICML 2025; accepted to Nature Biotechnology 2026.
                 </span>
               </li>
               <li class="pub-item">
@@ -687,7 +681,7 @@
                   >
                 </strong>
                 <span>
-                  Sai Advaith Maddipatla*, <strong>Nadav Bojan Sellam*</strong>, Sanketh Vedula,
+                  <strong>Nadav Bojan Sellam*</strong>, Sai Advaith Maddipatla*, Sanketh Vedula,
                   Ailie Marx, Alex M. Bronstein.<br />
                   Oral presentation at the Machine Learning in Structural Biology (MLSB) workshop
                   at NeurIPS 2024.
