@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Generative modeling of protein ensembles guided by crystallographic electron densities · Nadav Bojan Sellam</title>
+    <meta name="description" content="Non-i.i.d. guidance of a Chroma diffusion prior with raw crystallographic electron density, recovering alternate protein backbone conformations." />
+    <meta property="og:title" content="Generative modeling of protein ensembles guided by crystallographic electron densities · Nadav Bojan Sellam" />
+    <meta property="og:description" content="Non-i.i.d. guidance of a Chroma diffusion prior with raw crystallographic electron density, recovering alternate protein backbone conformations." />
+    <meta property="og:type" content="article" />
+    <link rel="stylesheet" href="../../style.css" />
+  </head>
+  <body>
+    <a class="skip" href="#main">Skip to content</a>
+    <header class="site">
+      <div class="wrap">
+        <a class="brand" href="../../">Nadav Bojan Sellam</a>
+        <nav aria-label="Primary">
+          <a href="../../#about">About</a>
+          <a href="../../cv/">CV</a>
+          <a href="../../publications/" aria-current="page">Publications</a>
+        </nav>
+      </div>
+    </header>
+
+    <main id="main" class="wrap narrow">
+      <a class="back" href="../">← All publications</a>
+      <article class="article">
+        <div class="badges"><span class="badge hot">MLSB @ NeurIPS 2024 · Contributed talk</span></div>
+        <h1 style="margin-top:10px">Generative modeling of protein ensembles guided by crystallographic electron densities</h1>
+        <p class="authors">Sai Advaith Maddipatla*, <span class="me">Nadav Bojan Sellam*</span>, Sanketh Vedula, Ailie Marx, Alex M. Bronstein</p>
+        <p class="note">* Equal contribution.</p>
+        <div class="pl"><a href="https://arxiv.org/abs/2412.13223" target="_blank" rel="noreferrer">arXiv</a><a href="https://www.mlsb.io/papers_2024/Generative_modeling_of_protein_ensembles_guided_by_crystallographic_electron_densities.pdf" target="_blank" rel="noreferrer">Workshop paper</a></div>
+        <nav class="series" aria-label="Research line"><p>Research line</p><ol><li class="now" aria-current="page"><strong>Ensembles from electron density</strong><span>2024 · Joint guidance on X-ray density</span></li><li><a href="../experiment-guided-alphafold/"><strong>Experiment-guided AlphaFold</strong><span>2025–26 · Stronger prior, more experimental observations</span></a></li><li><a href="../seek-and-you-shall-fold/"><strong>Seek and You Shall Fold</strong><span>2025 · Guidance without gradients</span></a></li></ol></nav>
+
+      <div class="callout"><strong>In short.</strong> A crystal structure usually shows one shape, but the raw X-ray data often contain evidence of several. We use a pretrained generative model, <strong>Chroma</strong>, as a prior over protein structures and guide a whole <strong>ensemble</strong> so that its <em>combined</em> density matches the measured electron density. In three showcased regions, agreement with the density rose from <strong>0.82 → 0.89</strong>, <strong>0.68 → 0.80</strong> and <strong>0.66 → 0.84</strong>, and the ensembles recovered alternate backbone conformations that unguided sampling misses.</div>
+      <dl class="spec"><dt>Problem</dt><dd>Sample an ensemble of protein structures whose average density explains a measured crystallographic map.</dd><dt>Prior</dt><dd>Chroma, a pretrained score-based diffusion model, with a differentiable side-chain packer.</dd><dt>Method</dt><dd>Non-i.i.d. score guidance through a differentiable density forward model, then matching-pursuit filtering.</dd><dt>Evaluated on</dt><dd>High-resolution crystal structures with well-separated altlocs. Target regions of 3–11 residues, with the rest of the protein held fixed.</dd><dt>Main caveat</dt><dd>Fit is measured on the same density used for guidance.</dd><dt>My contribution</dt><dd>I implemented the forward model that turns a protein structure into an electron density map.</dd></dl>
+      
+      <p class="note">Demos marked <span class="badge">Illustration</span> are small simulations of the idea and do not run our models. Results from the work itself are in the figures marked <strong>From our paper</strong> and in the charts and tables.</p>
+      <nav class="toc" aria-label="On this page"><a href="#s1">The problem</a><a href="#s2">Setup</a><a href="#s4">Joint guidance</a><a href="#s6">Results</a><a href="#eval">Reading the results</a><a href="#s7">Limitations</a><a href="#s8">Where it led</a><a href="#cite">Cite</a></nav>
+
+      <h2 id="s1">1. The problem: a crystal is not one structure</h2>
+      <p>X-ray crystallography is one of the most accurate ways to determine a protein's structure. A crystal is an enormous array of molecules, and they are not all identical. The measurement captures the variation between them.</p>
+      <p>Standard practice mostly compresses that information into one model plus a per-atom uncertainty (the <em>B-factor</em>). Where two distinct arrangements are clearly visible, crystallographers can model them as <strong>alternate locations</strong>, or <em>altlocs</em>. Backbone altlocs remain under-recognized, partly because common software ignores them or resolves them with simple rules. Prior work also showed that structure-ensemble predictors can fail to reproduce these conformations, or even their two-peaked distribution.</p>
+      <div class="callout">Can we generate an ensemble of realistic structures that directly explains the raw electron density, including regions with more than one conformation?</div>
+
+      <h2 id="s2">2. Setup: a generative prior and a differentiable forward model</h2>
+      <p>We treat ensemble fitting as an inverse problem. The general formulation is explained on the <a href="../experiment-guided-alphafold/#s3">Experiment-guided AlphaFold page</a>. Here, the two ingredients are:</p>
+      <ul class="plain">
+        <li><strong>Prior.</strong> Chroma, a pretrained score-based diffusion model over backbones, with a differentiable side-chain packer for the atoms that carry much of the density.</li>
+        <li><strong>Likelihood.</strong> A forward model places a Gaussian-like density on each atom, using tabulated form factors and the crystal's symmetry. A Gaussian noise model then compares the observed map with the <em>average</em> density of the ensemble.</li>
+      </ul>
+      <figure><img src="../../assets/chroma/method.png" alt="Pipeline: Chroma samples an ensemble, a forward model computes its density, and the likelihood gradient guides sampling." loading="lazy" /><figcaption><strong>From our paper.</strong> The diffusion model samples an ensemble, the forward model computes its density, and the gradient of the likelihood against the observed density guides the next sampling step.</figcaption></figure>
+
+      <h2 id="s4">3. The key idea: guide the ensemble jointly</h2>
+      <p>In standard guidance, each sample is pushed toward the data on its own. Here that is the wrong objective. If every sample tries to explain the <em>whole</em> density alone, nothing encourages them to divide the work.</p>
+      <p>Because our likelihood depends on the ensemble average, its gradient couples the samples. If one state is already over-represented, the residual there turns negative and pushes members away, while an unexplained region pulls them in. We call this <strong>non-i.i.d. guidance</strong>:</p>
+      <p style="text-align:center"><em>dX = −[½X + PP<sup>⊤</sup>(∇<sub>X</sub> log p<sub>t</sub>(X) + η ∇<sub>X</sub> log p(F<sub>o</sub> | X, χ(X), a))] β<sub>t</sub> dt + √β<sub>t</sub> P dn</em></p>
+      <div class="demo"><h3>Try it: independent versus joint guidance <span class="badge">Illustration</span></h3><p class="tagline">Ten ensemble members start mostly near the left state. The measured density also has a second state on the right. As in a diffusion sampler, the fit starts coarse and sharpens over time. With independent guidance, every member is drawn to the strongest state and the second one is lost. With joint guidance, members share the work of explaining the density, so some move to the second state.</p><div class="ctrl"><label>Guidance <select id="j-mode"><option value="independent">Independent (i.i.d.)</option><option value="joint">Joint (non-i.i.d.)</option></select></label><button id="j-run" type="button">Run</button><button id="j-reset" type="button">Reset</button></div><canvas id="j-canvas" role="img" aria-label="Ten ensemble members moving along a line to fit a two-peaked measured density, with the ensemble density drawn over it." width="700" height="320"></canvas><div class="readout" aria-live="polite" id="j-read"></div></div>
+
+      <h2 id="s6">4. Results</h2>
+      <p>We focused on high-resolution crystal structures (about 2.5 Å or better, with 4OLE at 2.52 Å) containing well-separated altlocs. To keep the problem well-posed, atoms outside the target region were held at their known positions. We compared guided and unguided sampling on two questions: does the ensemble fit the density, and does it find both known conformations? In each case we sampled 16 structures and kept at most 5 with <a href="../experiment-guided-alphafold/#s5">matching pursuit</a>.</p>
+      <p><strong>Does joint guidance matter?</strong> This is the paper's central claim, so we ablated it by guiding the same targets with and without the coupling between samples. The ablation covers 3 of the 13 proteins in the study.</p>
+      <div class="table-wrap"><table class="results"><thead><tr><th>Protein</th><th>Independent (i.i.d.)</th><th>Joint (non-i.i.d.)</th></tr></thead><tbody><tr><td>2O1A</td><td>0.7459</td><td class="best">0.7903</td></tr><tr><td>3OHE</td><td>0.8369</td><td class="best">0.8416</td></tr><tr><td>7EC8</td><td>0.8585</td><td class="best">0.8903</td></tr></tbody></table></div>
+      <p class="note">From our paper. Cosine similarity with the observed density; higher is better. Joint guidance wins on all three, by a margin that ranges from 0.005 to 0.044.</p>
+      <figure><img src="../../assets/chroma/ensembles.png" alt="Unconditional and guided ensembles for three protein regions, with density agreement scores." loading="lazy" /><figcaption><strong>From our paper.</strong> Unconditional (top) versus guided (bottom) generation for three regions. Numbers are cosine similarity with the experimental density. Compare within a protein, since map resolution differs between proteins.</figcaption></figure>
+      <p>Guided sampling consistently produced two- or multi-peaked distributions close to <strong>both</strong> modeled altlocs, while unguided samples often failed to represent that structure. As a control, we also tested two regions of 7EC8 chain B that were deposited with a single conformation. Guidance improved their cosine similarity from 0.789 to 0.924 and from 0.781 to 0.932.</p>
+      <figure><img src="../../assets/chroma/density.png" alt="Experimental density compared with density from generated ensembles." loading="lazy" /><figcaption><strong>From our paper.</strong> Experimental density compared with the density calculated from generated ensembles.</figcaption></figure>
+
+      <h2 id="eval">5. How to read these results</h2>
+      <ul class="plain">
+        <li><strong>Fit is measured on the guidance target.</strong> Cosine similarity uses the same map that guided sampling, so a gain over unguided sampling is expected. We did not hold out data in this workshop paper.</li>
+        <li><strong>Filtering applies to both arms.</strong> Guided and unguided batches each draw 16 samples and keep at most 5 by density fit, so the comparison is like for like.</li>
+        <li><strong>Altloc recovery is the more meaningful test.</strong> A good density fit does not by itself imply correct conformations. The bimodality analysis checks that samples land near both deposited altlocs, although those models were also built from the same density.</li>
+        <li><strong>Showcased regions.</strong> The three regions in the figure are illustrative. The paper's appendix covers the full set of proteins.</li>
+      </ul>
+
+      <h2 id="s7">6. Limitations</h2>
+      <ul class="plain">
+        <li><strong>Local regions.</strong> Chroma's backbone sampler is not sequence-conditioned, so we constrained the atoms outside each target region.</li>
+        <li><strong>A simple B-factor.</strong> We used one uniform value, the average over the structure. Optimizing it during sampling is future work.</li>
+        <li><strong>Side-chain packing</strong> and larger proteins remain open directions.</li>
+      </ul>
+
+      <h2>Takeaways</h2>
+      <ul class="plain">
+        <li><strong>Match the sampling to the measurement.</strong> If data describe a population, the guidance should act on a population.</li>
+        <li><strong>A shared likelihood creates useful coordination</strong> between samples with no explicit diversity term and no change to the prior network.</li>
+      </ul>
+
+      <h2>Glossary</h2><details class="more"><summary>Show the glossary</summary><ul class="plain"><li><strong>Electron density:</strong> a 3D map of where electrons are, reconstructed from X-ray diffraction.</li><li><strong>Altloc:</strong> an alternate modeled position for atoms in a crystal structure.</li><li><strong>Backbone:</strong> the repeating chain of atoms shared by all amino acids.</li><li><strong>B-factor:</strong> a per-atom value describing how spread out its density is.</li><li><strong>Non-i.i.d. guidance:</strong> guidance in which the update for each sample depends on the others.</li><li><strong>Matching pursuit:</strong> a greedy method that selects items one by one to best fit a target.</li></ul></details>
+
+      <h2 id="s8">Where it led</h2>
+      <p>This paper established joint guidance on real crystallographic data. <a href="../experiment-guided-alphafold/#from-chroma">Experiment-guided AlphaFold</a> carries the idea to a sequence-conditioned all-atom prior and to NMR and cryo-EM. <a href="../seek-and-you-shall-fold/">Seek and You Shall Fold</a> then asks what to do when the measurement has no gradient.</p>
+
+      <h2 id="cite">Citation</h2>
+      <details class="more"><summary>BibTeX</summary><pre class="bib">@inproceedings{maddipatla2024generative,
+  title     = {Generative modeling of protein ensembles guided by
+               crystallographic electron densities},
+  author    = {Maddipatla, Sai Advaith and Sellam, Nadav Bojan and Vedula, Sanketh and
+               Marx, Ailie and Bronstein, Alex},
+  booktitle = {NeurIPS 2024 Workshop on Machine Learning for Structural Biology},
+  year      = {2024},
+  eprint    = {2412.13223},
+  archivePrefix = {arXiv}
+}</pre></details>
+
+      </article>
+    </main>
+
+    <footer>
+      <div class="wrap">
+        <a href="https://scholar.google.com/citations?user=3N-QKKYAAAAJ&amp;hl=en" target="_blank" rel="noreferrer">Google Scholar</a>
+        <a href="https://www.linkedin.com/in/nadav-bojan-sellam-611115277" target="_blank" rel="noreferrer">LinkedIn</a>
+        <p>© 2026 Nadav Bojan Sellam</p>
+      </div>
+    </footer>
+    <script src="../../paper-demos.js"></script>
+    <script>jointDemo({canvas:"j-canvas",mode:"j-mode",run:"j-run",reset:"j-reset",read:"j-read"});</script>
+  </body>
+</html>

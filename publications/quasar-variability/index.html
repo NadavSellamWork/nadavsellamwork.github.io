@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Moving Beyond the DRW Model: Learning Quasar Variability with Generative Models · Nadav Bojan Sellam</title>
+    <link rel="stylesheet" href="../../style.css" />
+  </head>
+  <body>
+    <a class="skip" href="#main">Skip to content</a>
+    <header class="site">
+      <div class="wrap">
+        <a class="brand" href="../../">Nadav Bojan Sellam</a>
+        <nav aria-label="Primary">
+          <a href="../../#about">About</a>
+          <a href="../../cv/">CV</a>
+          <a href="../../publications/" aria-current="page">Publications</a>
+        </nav>
+      </div>
+    </header>
+
+    <main id="main" class="wrap narrow">
+      <a class="back" href="../">← All publications</a>
+      <article class="article">
+        <div class="badges"><span class="badge">arXiv 2026</span></div>
+        <h1 style="margin-top:10px">Moving Beyond the DRW Model: Learning Quasar Variability with Generative Models</h1>
+        <p class="authors"><span class="me">Nadav Bojan Sellam</span>, Kevin Park, Alex Bronstein, Zoltán Haiman</p>
+        
+        <div class="pl"><a href="https://arxiv.org/abs/2611.15040" target="_blank" rel="noreferrer">arXiv</a><a href="https://github.com/NadavSellamWork/Nullasar" target="_blank" rel="noreferrer">Code</a></div>
+
+      <div class="callout"><strong>In short.</strong> One way to search for pairs of supermassive black holes rests on an assumption: that a binary would make a distant quasar's brightness vary periodically. But quasars are noisy on their own, and that noise can mimic a periodic signal, so any detection depends on a model of "noise only", the <em>null hypothesis</em>. We ask what happens if that null is <strong>learned</strong> with a generative model, <strong>Nullasar</strong>, instead of hand-picked. On simulated data it <strong>matches</strong> a fitted AR(1) when AR(1) is the true noise (AUC 0.93 vs 0.90) and <strong>improves</strong> on a fitted AR(2) when the noise is AR(2) (0.965 vs 0.918). Its main pitfall is contaminated training data, which a PCA projection largely fixes (0.52–0.57 → 0.92–0.96).</div>
+      <p class="note">All experiments use synthetic light curves with injected sinusoids; we do not analyze real quasars or claim a detection. Demos marked <span class="badge">Illustration</span> are simplified toys. Our results are in the figures marked <strong>From our paper</strong> and the AUC charts.</p>
+      <nav class="toc" aria-label="On this page">
+        <a href="#s1">The problem</a><a href="#s2">Noise</a><a href="#s3">Null &amp; p-values</a><a href="#s4">Why one model fails</a><a href="#s5">Nullasar</a><a href="#s6">Sanity checks</a><a href="#s7">Results</a><a href="#s8">Contamination</a><a href="#s9">PCA trick</a><a href="#s10">Limitations</a><a href="#cite">Code &amp; cite</a>
+      </nav>
+
+      <h2 id="s1">1. The problem: one blurry dot, two black holes?</h2>
+      <p>At the center of most large galaxies sits a <strong>supermassive black hole</strong>, millions to billions of times the mass of the Sun. When it swallows gas it glows brighter than all the stars of its galaxy; we call it a <strong>quasar</strong>. When two galaxies merge, their black holes should sink to the middle and end up orbiting each other as a <strong>binary</strong>, only light-years apart, before eventually colliding.</p>
+      <p>Finding these binaries matters for understanding how galaxies and black holes grow, and for the gravitational waves they will emit. The difficulty is distance. These systems are billions of light-years away, and the two black holes are far too close together for any telescope to see them as separate. <strong>All we get is a single point of light.</strong></p>
+      <p>What we can do is watch that point for years. Sky surveys (ZTF, CRTS, and soon the Rubin Observatory) record its brightness every few days, giving a <strong>light curve</strong>: one noisy 1-D time series per quasar. <strong>Assuming</strong> a binary's orbit would modulate the brightness periodically, which is the working assumption behind these searches and of our paper, the question becomes a signal-processing one:</p>
+      <div class="callout">Given a <em>single</em> noisy time series, is there a periodic component inside it? Under that assumption: no period suggests one black hole, a period suggests two.</div>
+
+      <div class="demo">
+        <h3>Zoom out: from two black holes to a point of light <span class="badge">Illustration</span></h3>
+        <p class="tagline">Left: one black hole. Right: two black holes orbiting each other. Under each, the brightness we would record. The curves are illustrative and build in the assumption that a binary produces a periodic signal: up close, the single one is steady and the binary pulses with its orbit. Fly away from them, and both shrink to the same point of light while noise piles into the signal, until it is hard to tell which curve is the periodic one. (Rendered live: light rays are bent around each black hole with an approximate general-relativity ray tracer. The disks and brightness curves are stylized.)</p>
+        <div class="ctrl">
+          <label>Camera distance <input id="b-d" type="range" min="0" max="100" value="0" /></label>
+          <button id="b-fly" type="button">Fly away</button>
+          <button id="b-play" type="button">Pause</button>
+          <button id="b-reset" type="button">Reset</button>
+        </div>
+        <canvas id="b-canvas" role="img" aria-label="Two side-by-side animations, a single black hole and a binary of two orbiting black holes, with their light curves underneath. As the camera moves away both become a single point and noise hides the binary's periodic signal." width="700" height="420"></canvas>
+        <div class="readout" aria-live="polite" id="b-read"></div>
+      </div>
+
+      <h2 id="s2">2. The catch: quasars are noisy by themselves</h2>
+      <p>Even a lone black hole flickers. Its brightness drifts up and down at random, through processes in the accretion disk that are still not precisely understood. The standard description is the <strong>damped random walk (DRW)</strong>. In ML terms it is an <strong>AR(1) process</strong>: each value is a fraction of the previous one plus fresh Gaussian noise,</p>
+      <p style="text-align:center"><em>x<sub>t</sub> = φ · x<sub>t−1</sub> + ε<sub>t</sub></em></p>
+      <p>with φ close to 1 meaning long memory. This is "red noise": slow fluctuations carry most of the power. And slow random fluctuations look a lot like a few cycles of a sine wave. That is exactly the trap: <strong>a wobbly light curve is not, by itself, evidence of a binary</strong>, because pure noise wobbles too. It happens often enough that re-analyses with more careful noise models have cast doubt on many published candidates; one study found 33 candidates from one survey were statistically insignificant under a different null.</p>
+
+      <h2 id="s3">3. Null hypotheses, p-values, and the Monte Carlo test</h2>
+      <p>For readers from ML, here is the whole statistical machinery, which will be familiar from anomaly detection:</p>
+      <ul class="plain">
+        <li><strong>Null hypothesis H<sub>0</sub>:</strong> "this light curve contains only stochastic noise, with no periodic signal". That noise is described by a simulator we can sample from.</li>
+        <li><strong>Test statistic T:</strong> how "periodic" does the curve look? We take the <strong>highest peak of its periodogram</strong> (the power spectrum from the Fourier transform), which does not require knowing the period in advance.</li>
+        <li><strong>p-value:</strong> the probability that noise alone produces a peak at least this high. We estimate it by <strong>Monte Carlo</strong>: simulate N noise-only curves from the null, compute T for each, and count how many beat the observed one (<em>p = (b + 1) / (N + 1)</em>). A small p means "very unlikely to be noise", so it is flagged as a periodic candidate (and, under the assumption above, a possible binary).</li>
+      </ul>
+      <p>Notice what this means: the answer is only as good as the <strong>noise simulator</strong>. The null hypothesis is a generative model, and it decides what counts as "normal". Try it below: the data stay the same, and you choose the noise model used for the test.</p>
+
+      <div class="demo">
+        <h3>Try it: a Monte Carlo test with the wrong null <span class="badge">Illustration</span></h3>
+        <p class="tagline">The real noise is an <strong>AR(2)</strong>, with coefficients at one of the two clusters in our population. The <strong>wrong null is an AR(1)</strong>, the standard damped-random-walk assumption. Even with its best parameter, it cannot reproduce the AR(2) spectrum, so it misjudges how often noise alone produces a strong peak. Compare it with the AR(2) null, or fit either model to the curve on screen.</p>
+        <div class="ctrl">
+          <label>True process <select id="n-proc"><option value="main">AR(2), φ₁ 0.30, φ₂ 0.40</option><option value="small">AR(2), φ₁ 0.10, φ₂ 0.20</option></select></label>
+          <label>Null <select id="n-model"><option value="ar1">Wrong: AR(1)</option><option value="ar2">Correct: AR(2)</option></select></label>
+          <label>Injected signal <input id="n-snr" type="range" min="0" max="12" value="0" /></label>
+          <button id="n-fit" type="button">Fit null to this curve</button>
+          <button id="n-new" type="button">New light curve</button>
+        </div>
+        <canvas id="n-canvas" role="img" aria-label="Observed light curve above, and a histogram of the peak periodogram power of simulated noise-only curves below, with the observed value marked." width="700" height="434"></canvas>
+        <div class="readout" aria-live="polite" id="n-read"></div>
+      </div>
+
+      <h2 id="s4">4. Why one assumed model is not enough</h2>
+      <p>We first make this concrete with a controlled experiment. We generate 8,000 light curves from a slightly richer process, an <strong>AR(2)</strong> (each value depends on the previous <em>two</em>), with coefficients drawn from a mixture of two clusters. Then we pretend not to know that and fit the usual AR(1) to each curve.</p>
+      <p>The AR(1) fit looks perfectly fine: its leftover residuals have lag-1 autocorrelation of about 0.02, well under the 0.12 you would expect from white noise at this length. Yet the p-values it produces are systematically wrong, and wrong <em>differently at different frequencies</em>: in the mid-frequency band the AR(1) null underestimates p by roughly an order of magnitude (false alarms), while at the lowest and highest frequencies it assigns plausible-looking p-values to amplitudes the true process essentially never produces (missed signals).</p>
+      <figure><img src="../../assets/quasar/misspec.png" alt="Null hypothesis misspecification figure" loading="lazy" /><figcaption><strong>From our paper (simulated data).</strong> Top: the true AR(2) coefficients, the recovered ones (right model), and what an AR(1) fit collapses them into. Bottom: p-value maps for the true AR(2) null, the fitted AR(1) null, and their relative difference. Red = AR(1) gives p-values that are too small (false positives); blue = too large (false negatives).</figcaption></figure>
+      <p><strong>Two separate problems</strong> make hand-picked nulls fragile: (1) the model family may simply be wrong; (2) even with the right family, estimating its parameters from <em>one</em> short, noisy curve is unreliable, and flexible models such as AR(2) can oscillate, so the fit may quietly <em>absorb the very signal we are looking for</em> into the "noise", making the null too permissive.</p>
+
+      <h2 id="s5">5. The approach: learn the null from a population of quasars</h2>
+      <p>One light curve cannot tell you its own noise model, but <strong>thousands of curves can</strong>. In our paper those curves are simulated, so we can check the learned null against the known truth. The idea of <strong>Nullasar</strong> is to learn the distribution over light curves directly from data, without ever writing down an AR or DRW formula, and then, given an observed curve, to generate fresh noise-only curves that look statistically like it.</p>
+      <ul class="plain">
+        <li><strong>Generator.</strong> A continuous normalizing flow trained with <strong>flow matching</strong>. It learns a velocity field <em>v<sub>θ</sub>(x<sub>t</sub>, t | z)</em> that carries Gaussian noise to a light curve; at generation time we integrate it with 100 Euler steps. It is a 1-D U-Net with a self-attention block at the bottleneck, and it works on the <strong>Fourier coefficients</strong> of the curve (with the time-domain signal as extra input), because spectral structure is what matters here.</li>
+        <li><strong>Encoder.</strong> A network <em>E(x) = z</em> that compresses a light curve into a 128-D vector. Think of <em>z</em> as a learned replacement for hand-picked noise parameters such as (τ, σ) or (φ₁, φ₂): same role, but no fixed functional form. It conditions the generator through FiLM layers.</li>
+        <li><strong>A training trick.</strong> The curve we ask the generator to produce and the curve we feed the encoder are two <em>different, non-overlapping segments of the same simulated light curve</em>. So <em>z</em> cannot just memorize the exact curve; it has to capture the underlying <em>process</em>.</li>
+      </ul>
+
+      <figure class="diagram"><div class="scroll"><svg viewBox="0 0 760 270" role="img" aria-label="Nullasar pipeline: an observed light curve is encoded into a vector z, optionally projected with PCA, and used to condition a flow that turns Gaussian noise into null light curves for a Monte Carlo test." width="760" height="270">
+        <defs><marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="dg-head"/></marker></defs>
+        <rect class="dg-box" x="10" y="20" width="150" height="54" rx="10"/><text class="dg-t" x="85" y="45" text-anchor="middle">Observed</text><text class="dg-t" x="85" y="62" text-anchor="middle">light curve x</text>
+        <rect class="dg-box" x="210" y="20" width="130" height="54" rx="10"/><text class="dg-t" x="275" y="45" text-anchor="middle">Encoder</text><text class="dg-s" x="275" y="62" text-anchor="middle">E(x) = z</text>
+        <rect class="dg-box" x="390" y="20" width="110" height="54" rx="10"/><text class="dg-t" x="445" y="45" text-anchor="middle">z</text><text class="dg-s" x="445" y="62" text-anchor="middle">128-D vector</text>
+        <rect class="dg-opt" x="550" y="20" width="190" height="54" rx="10"/><text class="dg-t" x="645" y="45" text-anchor="middle">PCA projection (top-k)</text><text class="dg-s" x="645" y="62" text-anchor="middle">inference-time fix</text>
+        <path class="dg-a" d="M160,47 H208" marker-end="url(#ah)"/><path class="dg-a" d="M340,47 H388" marker-end="url(#ah)"/><path class="dg-a" d="M500,47 H548" marker-end="url(#ah)"/>
+        <path class="dg-a" d="M445,74 V118 H320 V158" marker-end="url(#ah)"/><path class="dg-a dg-dash" d="M645,74 V118 H320"/>
+        <text class="dg-s" x="470" y="112">conditioning (FiLM)</text>
+        <rect class="dg-box" x="10" y="172" width="150" height="54" rx="10"/><text class="dg-t" x="85" y="196" text-anchor="middle">Gaussian noise</text><text class="dg-s" x="85" y="213" text-anchor="middle">x₀ ~ N(0, I)</text>
+        <rect class="dg-main" x="210" y="160" width="220" height="78" rx="10"/><text class="dg-t" x="320" y="188" text-anchor="middle">Conditional flow v<tspan dy="3" font-size="72%">θ</tspan><tspan dy="-3">​</tspan>(x<tspan dy="3" font-size="72%">t</tspan><tspan dy="-3">​</tspan>, t | z)</text><text class="dg-s" x="320" y="208" text-anchor="middle">1-D U-Net · FiLM · Fourier domain</text><text class="dg-s" x="320" y="224" text-anchor="middle">100 Euler steps</text>
+        <rect class="dg-box" x="470" y="172" width="130" height="54" rx="10"/><text class="dg-t" x="535" y="196" text-anchor="middle">N null curves</text><text class="dg-s" x="535" y="213" text-anchor="middle">inverse FFT</text>
+        <rect class="dg-box" x="640" y="172" width="110" height="54" rx="10"/><text class="dg-t" x="695" y="196" text-anchor="middle">Monte Carlo</text><text class="dg-s" x="695" y="213" text-anchor="middle">→ p-value</text>
+        <path class="dg-a" d="M160,199 H208" marker-end="url(#ah)"/><path class="dg-a" d="M430,199 H468" marker-end="url(#ah)"/><path class="dg-a" d="M600,199 H638" marker-end="url(#ah)"/>
+      </svg></div><figcaption>The Nullasar pipeline. The encoder summarizes the observed curve into <em>z</em>; the flow turns Gaussian noise into noise-only light curves consistent with <em>z</em>; those serve as the null for the Monte Carlo test. The dashed gold box is the optional PCA projection.</figcaption></figure>
+
+
+      <figure class="diagram"><div class="scroll"><svg class="wide" viewBox="0 0 960 500" role="img" aria-label="Architecture of the generator: a one-dimensional U-Net with skip connections and a self-attention bottleneck, modulated by FiLM layers from the encoder vector z, taking Fourier coefficients plus the time-domain signal and predicting a velocity that is integrated with Euler steps." width="960" height="500">
+        <defs><marker id="ah2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="dg-head"/></marker></defs>
+        <!-- input -->
+        <rect class="dg-box" x="30" y="14" width="190" height="58" rx="10"/><text class="dg-t" x="125" y="38" text-anchor="middle">Input: x̃<tspan dy="3" font-size="72%">t</tspan><tspan dy="-3">​</tspan> (Fourier coefficients)</text><text class="dg-s" x="125" y="56" text-anchor="middle">+ time-domain signal x, and time t</text>
+        <!-- training note -->
+        <text class="dg-s" x="300" y="34">Trained with flow matching:</text><text class="dg-s" x="300" y="52">L = E ‖ v<tspan dy="3" font-size="72%">θ</tspan><tspan dy="-3">​</tspan>(x<tspan dy="3" font-size="72%">t</tspan><tspan dy="-3">​</tspan>, t | z) − (x₁ − x₀) ‖²</text>
+        <!-- U-Net -->
+        <rect class="dg-box" x="30" y="110" width="100" height="46" rx="8"/><text class="dg-t" x="80" y="130" text-anchor="middle">Down block</text><text class="dg-s" x="80" y="146" text-anchor="middle">conv · GN · SiLU</text>
+        <rect class="dg-box" x="140" y="170" width="100" height="46" rx="8"/><text class="dg-t" x="190" y="190" text-anchor="middle">Down block</text><text class="dg-s" x="190" y="206" text-anchor="middle">coarser, wider</text>
+        <rect class="dg-box" x="250" y="230" width="100" height="46" rx="8"/><text class="dg-t" x="300" y="250" text-anchor="middle">Down block</text><text class="dg-s" x="300" y="266" text-anchor="middle">coarser, wider</text>
+        <rect class="dg-main" x="370" y="290" width="160" height="46" rx="8"/><text class="dg-t" x="450" y="310" text-anchor="middle">Bottleneck</text><text class="dg-s" x="450" y="326" text-anchor="middle">self-attention (long range)</text>
+        <rect class="dg-box" x="550" y="230" width="100" height="46" rx="8"/><text class="dg-t" x="600" y="250" text-anchor="middle">Up block</text><text class="dg-s" x="600" y="266" text-anchor="middle">finer</text>
+        <rect class="dg-box" x="660" y="170" width="100" height="46" rx="8"/><text class="dg-t" x="710" y="190" text-anchor="middle">Up block</text><text class="dg-s" x="710" y="206" text-anchor="middle">finer</text>
+        <rect class="dg-box" x="770" y="110" width="100" height="46" rx="8"/><text class="dg-t" x="820" y="130" text-anchor="middle">Up block</text><text class="dg-s" x="820" y="146" text-anchor="middle">full resolution</text>
+        <rect class="dg-main" x="770" y="14" width="160" height="58" rx="10"/><text class="dg-t" x="850" y="38" text-anchor="middle">Velocity v<tspan dy="3" font-size="72%">θ</tspan><tspan dy="-3">​</tspan></text><text class="dg-s" x="850" y="56" text-anchor="middle">same shape as x̃<tspan dy="3" font-size="72%">t</tspan><tspan dy="-3">​</tspan></text>
+        <!-- main path -->
+        <path class="dg-a" d="M80,72 V110" marker-end="url(#ah2)"/>
+        <path class="dg-a" d="M80,156 V193 H140" marker-end="url(#ah2)"/>
+        <path class="dg-a" d="M190,216 V253 H250" marker-end="url(#ah2)"/>
+        <path class="dg-a" d="M300,276 V313 H370" marker-end="url(#ah2)"/>
+        <path class="dg-a" d="M530,313 H600 V276" marker-end="url(#ah2)"/>
+        <path class="dg-a" d="M650,253 H710 V216" marker-end="url(#ah2)"/>
+        <path class="dg-a" d="M760,193 H820 V156" marker-end="url(#ah2)"/>
+        <path class="dg-a" d="M820,110 V72" marker-end="url(#ah2)"/>
+        <!-- skips -->
+        <path class="dg-a dg-skip" d="M130,133 H770" marker-end="url(#ah2)"/>
+        <path class="dg-a dg-skip" d="M240,193 H660" marker-end="url(#ah2)"/>
+        <path class="dg-a dg-skip" d="M350,253 H550" marker-end="url(#ah2)"/>
+        <text class="dg-s" x="410" y="125">skip connections keep fine-scale detail</text>
+        <!-- FiLM bus -->
+        <path class="dg-film" d="M110,360 H810"/>
+        <path class="dg-film" d="M110,360 V156"/><path class="dg-film" d="M220,360 V216"/><path class="dg-film" d="M330,360 V276"/><path class="dg-film" d="M450,360 V336"/><path class="dg-film" d="M580,360 V276"/><path class="dg-film" d="M690,360 V216"/><path class="dg-film" d="M800,360 V156"/>
+        <text class="dg-s dg-gold" x="492" y="384">FiLM: h ← γ(z) ⊙ h + β(z) in every block</text>
+        <!-- conditioning branch -->
+        <rect class="dg-box" x="30" y="415" width="190" height="56" rx="10"/><text class="dg-t" x="125" y="438" text-anchor="middle">Conditioning curve x<tspan dy="3" font-size="72%">cond</tspan><tspan dy="-3">​</tspan></text><text class="dg-s" x="125" y="456" text-anchor="middle">another segment, same light curve</text>
+        <rect class="dg-box" x="250" y="415" width="120" height="56" rx="10"/><text class="dg-t" x="310" y="438" text-anchor="middle">Encoder E</text><text class="dg-s" x="310" y="456" text-anchor="middle">trained jointly</text>
+        <rect class="dg-opt" x="400" y="415" width="150" height="56" rx="10"/><text class="dg-t" x="475" y="438" text-anchor="middle">z (128-D)</text><text class="dg-s" x="475" y="456" text-anchor="middle">optional PCA projection</text>
+        <path class="dg-a" d="M220,443 H248" marker-end="url(#ah2)"/><path class="dg-a" d="M370,443 H398" marker-end="url(#ah2)"/><path class="dg-a dg-gold-line" d="M475,415 V360" marker-end="url(#ah2)"/>
+        <!-- generation -->
+        <path class="dg-a" d="M930,43 H950 V421 H935" marker-end="url(#ah2)"/>
+        <rect class="dg-box" x="620" y="398" width="315" height="44" rx="8"/><text class="dg-t" x="777" y="418" text-anchor="middle">Euler step (×100): x̃<tspan dy="3" font-size="72%">t+Δt</tspan><tspan dy="-3">​</tspan> = x̃<tspan dy="3" font-size="72%">t</tspan><tspan dy="-3">​</tspan> + Δt · v<tspan dy="3" font-size="72%">θ</tspan><tspan dy="-3">​</tspan></text><text class="dg-s" x="777" y="434" text-anchor="middle">the new x̃<tspan dy="3" font-size="72%">t</tspan><tspan dy="-3">​</tspan> goes back into the input</text>
+        <rect class="dg-box" x="620" y="452" width="315" height="36" rx="8"/><text class="dg-t" x="777" y="475" text-anchor="middle">x̃<tspan dy="3" font-size="72%">1</tspan><tspan dy="-3">​</tspan> → inverse FFT → null light curve</text>
+        <path class="dg-a" d="M777,442 V452" marker-end="url(#ah2)"/>
+      </svg></div><figcaption>The generator <em>v<sub>θ</sub></em>, as described in our paper: a 1-D U-Net (an encoder-decoder with progressively coarser features, skip connections, group normalization and SiLU activations, and a self-attention block at the bottleneck). It takes the Fourier coefficients together with the time-domain signal, and is conditioned on <em>z</em> through FiLM layers. The number of levels and channels drawn here is schematic; the exact sizes are in the paper's appendix.</figcaption></figure>
+
+      <div class="demo">
+        <h3>Try it: flow matching, from noise to a light curve <span class="badge">Illustration</span></h3>
+        <p class="tagline">Training uses straight-line paths between a white-noise sample and a training light curve. The network learns the velocity that moves samples along such paths, so at generation time it can start from noise alone. (This shows the training path, not the trained network.)</p>
+        <div class="ctrl">
+          <label>Time t <input id="f-t" type="range" min="0" max="100" value="0" /></label>
+          <button id="f-play" type="button">Play</button>
+        </div>
+        <canvas id="f-canvas" role="img" aria-label="A light curve morphing from white noise to a red-noise light curve as time t increases, with its power spectrum below on a linear scale and again on a log-log scale." width="700" height="700"></canvas>
+        <div class="readout" aria-live="polite" id="f-read"></div>
+      </div>
+
+      <p>To use Nullasar as a null, we feed the observed curve to the encoder, get <em>z</em>, generate N realizations, and plug them into exactly the same Monte Carlo test as before. Nothing in that pipeline assumes AR or DRW.</p>
+
+      <h2 id="s6">6. Does it actually learn the noise?</h2>
+      <details class="more"><summary>Show the sanity checks (three experiments and their figures)</summary>
+      <p>Before using it for detection, we checked what the model really captures, on synthetic data where the truth is known.</p>
+      <ul class="plain">
+        <li><strong>Beyond the power spectrum.</strong> We built two datasets with identical average power spectra but different distributions of Fourier amplitudes (Rayleigh vs. uniform). A model that only learned the spectrum could not tell them apart. Nullasar reproduces both, so it learns <em>higher-order</em> statistics.</li>
+        <li><strong>Population structure.</strong> Trained on AR(2) curves, its samples recover the correlated distribution of AR(2) coefficients, without being told the AR(2) form.</li>
+        <li><strong>Conditional generation.</strong> Given a single curve, it generates new curves whose estimated coefficients follow those of the conditioning curve, with accuracy comparable to fitting the correct model.</li>
+      </ul>
+      <figure><img src="../../assets/quasar/psd.png" alt="Average PSDs of generated light curves" loading="lazy" /><figcaption><strong>From our paper (simulated data).</strong> Average power spectra of generated curves match the target for both amplitude distributions: the two datasets are indistinguishable at the level of the spectrum alone.</figcaption></figure>
+      <figure><img src="../../assets/quasar/yw.png" alt="AR(2) coefficient distribution recovered" loading="lazy" /><figcaption><strong>From our paper (simulated data).</strong> Distribution of AR(2) coefficients fitted to generated curves versus the true distribution.</figcaption></figure>
+      <figure><img src="../../assets/quasar/conditional.png" alt="Conditional generation accuracy" loading="lazy" /><figcaption><strong>From our paper (simulated data).</strong> Conditional generation: the estimated coefficient of generated curves tracks the coefficient of the curve it was conditioned on (dashed = ideal).</figcaption></figure>
+      </details>
+
+      <h2 id="s7">7. Results: detecting periodic signals</h2>
+      <p>The test bed is entirely simulated: take synthetic noise-only curves, inject a sinusoid into half of them, and ask each null hypothesis to separate the two groups using the periodogram-peak statistic. Quality is measured by the <strong>AUC</strong> of the ROC curve (1.0 = perfect separation, 0.5 = coin flip). We compare against an <strong>oracle</strong> that knows the true coefficients, a <strong>fitted</strong> null that estimates them from each curve (what is typically done), and a <strong>mis-specified</strong> null with the wrong family.</p>
+
+      <div class="bars">
+        <h3>From our paper: simulated AR(1) light curves</h3>
+        <div class="bar"><span>Random-coefficient null</span><div class="track"><i style="width:65.8%"></i></div><b>0.829</b></div>
+        <div class="bar"><span>Fitted AR(1)</span><div class="track"><i style="width:80.8%"></i></div><b>0.904</b></div>
+        <div class="bar hot"><span>Nullasar</span><div class="track"><i style="width:84.6%"></i></div><b>0.927</b></div>
+        <div class="bar"><span>Oracle (true φ known)</span><div class="track"><i style="width:92.9%"></i></div><b>0.965</b></div>
+      </div>
+      <div class="bars">
+        <h3>From our paper: simulated AR(2) light curves</h3>
+        <div class="bar"><span>Wrong family: AR(1) fit</span><div class="track"><i style="width:70.1%"></i></div><b>0.851</b></div>
+        <div class="bar"><span>Fitted AR(2)</span><div class="track"><i style="width:83.6%"></i></div><b>0.918</b></div>
+        <div class="bar"><span>AR(2) coefficient flow</span><div class="track"><i style="width:90.5%"></i></div><b>0.953</b></div>
+        <div class="bar hot"><span>Nullasar</span><div class="track"><i style="width:92.96%"></i></div><b>0.965</b></div>
+        <div class="bar"><span>Oracle (true coefficients known)</span><div class="track"><i style="width:97.1%"></i></div><b>0.986</b></div>
+      </div>
+      <p class="note">Bar length shows AUC from 0.5 (chance) to 1.0. Synthetic data. The AR(2) Nullasar number is averaged over three independently trained models.</p>
+
+      <p><strong>Reading the results.</strong> When the family is right and simple (AR(1)), Nullasar matches explicit parameter fitting: it can infer the relevant parameter from the curve. The interesting case is AR(2). Even with the <em>correct</em> family, the per-curve fit does worse, because AR(2) is expressive enough to explain part of the injected sinusoid as noise. We attribute Nullasar's advantage to the fact that it has seen the <strong>whole population of coefficients</strong>, which acts like a <strong>prior</strong>: coefficient values that are rare in the population are not favored just because they can soak up a periodic component. This is the same shrinkage effect as Bayesian estimation with an informative prior, but learned from data rather than specified.</p>
+      <details class="more"><summary>How we tested the "learned prior" explanation</summary>
+        <p>We tested that interpretation with an explicit ablation, an <em>AR(2) coefficient flow</em>: a small separate flow that outputs the posterior over (φ₁, φ₂) given a curve, weighted by how common each pair is in the population, from which we simulate AR(2) nulls. It lands close to Nullasar (0.953 vs 0.965) and well above per-curve fitting. This is consistent with the "learned prior" explanation; it is evidence for it, not a proof.</p>
+      </details>
+      <figure><img src="../../assets/quasar/ar2roc.png" alt="ROC curves for the AR(2) detection experiment" loading="lazy" /><figcaption><strong>From our paper (simulated data).</strong> ROC curves, AR(2) experiment. Top-left is better; the dashed diagonal is chance.</figcaption></figure>
+
+      <h2 id="s8">8. The catch: contaminated training data</h2>
+      <p>A learned null has a weakness the parametric ones do not: it models <em>whatever is in the training set</em>. This matters for any future use on real catalogs, which may contain the very signals being searched for. If periodic curves sit in the training data, the model learns that they are normal.</p>
+      <p>We simulated this by injecting sinusoids into a growing fraction of the synthetic training curves. This experiment uses its own setup (AR(1) with φ from 0.2 to 0.9 and stronger signals, SNR 0.8–1.2, versus 0.5–0.8 in section 7), so its AUCs are higher and should not be compared directly with the AR(1) chart above. The effect is brutal. With clean data the AUC is 0.99 (versus 0.97 for the fitted AR(1) null). With just <strong>0.5%</strong> contaminated curves, the smallest fraction we tested, it collapses to <strong>0.57</strong>, and stays near chance at higher contamination.</p>
+      <figure><img src="../../assets/quasar/contam.png" alt="ROC curves under training-set contamination" loading="lazy" /><figcaption><strong>From our paper (simulated data).</strong> Detection ROC as the training set is contaminated with periodic signals. Orange: clean training set. All contaminated models fall to near the chance diagonal.</figcaption></figure>
+      <p><strong>Why it fails.</strong> Conditioned on a light curve that contains a periodic signal, the contaminated model is happy to generate signal-like "noise", because it has seen such curves in training. The observed signal no longer stands out against its own null, so p-values for true (injected) signals go up and detection power disappears. Simply cleaning the data is circular: finding the contaminated curves is the detection problem itself.</p>
+      <p>How much would this matter on real data? Our rough estimate suggests bright binaries are rare: a bright binary spends about 10<sup>4</sup> years in the relevant phase, versus a quasar lifetime of about 10<sup>7</sup> years, so roughly 0.1% of quasars. That is below the lowest contamination we tested, and whether such a low level hurts is still to be tested.</p>
+
+      <h2 id="s9">9. The PCA trick</h2>
+      <p>The fix works at inference time, needs <strong>no retraining</strong>, and rests on one observation about the encoder's output <em>z</em>.</p>
+      <ul class="plain">
+        <li>Across the training population, <em>z</em> varies mostly along a few <strong>dominant directions</strong>: these describe how the noise process itself differs from quasar to quasar (the learned analogue of φ or τ).</li>
+        <li>A periodic signal is <strong>rare</strong> in the training data, so it contributes little variance. Its imprint on <em>z</em> should live in the <strong>weak, low-variance directions</strong>.</li>
+      </ul>
+      <p>So we run PCA on the encodings of the training set, keep only the top <em>k</em> directions (<em>k</em> = 6 here), and, at test time, replace the conditioning vector by its projection:</p>
+      <p style="text-align:center"><em>z<sub>proj</sub> = z̄ + U<sub>k</sub> U<sub>k</sub><sup>⊤</sup> (z − z̄)</em></p>
+      <p>The generator is <em>faithful to its condition</em>: it produces curves consistent with what the condition says. After projection, the condition describes only the noise process, so the model generates noise-only curves and the observed signal stands out again. Note that the model has <strong>not forgotten</strong> the contamination, and it can still generate signal-like curves; we just stop asking it to.</p>
+
+      <div class="demo">
+        <h3>Try it: projecting away the signal imprint <span class="badge">Illustration</span></h3>
+        <p class="tagline">A 2-D cartoon of the 128-D encoding space. Blue dots: encodings of the training curves, mostly spread along one dominant direction (dashed). The red dot is the encoding of an observed curve that contains a signal; the green ring is where it would sit without the signal. Because the signal's imprint lies almost entirely in the weak directions, projecting onto the dominant direction lands the condition almost exactly on the signal-free encoding, while keeping the noise-model information.</p>
+        <div class="ctrl">
+          <label>Signal imprint <input id="p-sig" type="range" min="0" max="100" value="75" /></label>
+          <label>Noise-model parameter <input id="p-phi" type="range" min="-100" max="100" value="40" /></label>
+          <label><input id="p-proj" type="checkbox" checked /> Project (keep top-k directions)</label>
+        </div>
+        <canvas id="p-canvas" role="img" aria-label="Two-dimensional scatter of training encodings with the observed encoding and its projection onto the leading principal direction." width="700" height="434"></canvas>
+        <div class="readout" aria-live="polite" id="p-read"></div>
+      </div>
+
+      <div class="bars">
+        <h3>From our paper (simulated data): detection AUC under contamination, before and after the projection</h3>
+        <div class="bar"><span>0% (clean)</span><div class="track"><i style="width:98%"></i></div><b>0.99 → 0.99</b></div>
+        <div class="bar"><span>0.5% contaminated</span><div class="track dual"><i style="width:14%"></i><u style="width:92%"></u></div><b>0.57 → 0.96</b></div>
+        <div class="bar"><span>1%</span><div class="track dual"><i style="width:12%"></i><u style="width:88%"></u></div><b>0.56 → 0.94</b></div>
+        <div class="bar"><span>10%</span><div class="track dual"><i style="width:4%"></i><u style="width:90%"></u></div><b>0.52 → 0.95</b></div>
+        <div class="bar"><span>20%</span><div class="track dual"><i style="width:8%"></i><u style="width:84%"></u></div><b>0.54 → 0.92</b></div>
+      </div>
+      <p class="note">Thin gray bar: without projection. Blue bar: with the k = 6 projection. Fitted AR(1) baseline: 0.97. Bar length shows AUC from 0.5 to 1.0. Values from our ROC curves.</p>
+      <p>The projection leaves the clean model unharmed (AUC 0.99) and lifts the contaminated models from 0.52–0.57 to 0.92–0.96, close to the fitted AR(1) null. A mild decline with heavier contamination remains.</p>
+      <figure><img src="../../assets/quasar/projected.png" alt="ROC curves after the PCA projection" loading="lazy" /><figcaption><strong>From our paper (simulated data).</strong> Same models as before, with the conditioning vector projected onto its six leading principal directions. No retraining.</figcaption></figure>
+      <h3 style="margin-top:24px">Choosing k: the PCA spectrum as a tool</h3>
+      <p><strong>In the paper we simply use <em>k</em> = 6.</strong> For new data, we suggest looking at the <strong>spectrum of the PCA</strong>, the variance of the encodings along each principal direction, as a practical diagnostic. A sharp drop is a natural place to cut: the strong directions before it should describe how the noise process varies, while the weak directions after it should hold most of the contamination, along with a small part of the noise variation.</p>
+      <div class="demo">
+        <h3>Try it: choose k from the spectrum <span class="badge">Illustration</span></h3>
+        <p class="tagline"><strong>Illustration, not our measured eigenvalues.</strong> The spectrum is made up to have the same structure. The lower curves show what the assumption above implies: most of the noise-process variation sits in the strong directions, a little of it remains in the weak ones, and the signal imprint sits almost entirely in the weak ones. Move k across the drop.</p>
+        <div class="ctrl"><label>Kept directions k <input id="k-k" type="range" min="1" max="32" value="6" /> <span id="k-v">6</span></label></div>
+        <canvas id="k-canvas" role="img" aria-label="Bar chart of PCA variance per component on a log scale with a sharp drop after six components, above curves showing how much noise-process variation and signal imprint are retained as k increases." width="700" height="600"></canvas>
+        <div class="readout" aria-live="polite" id="k-read"></div>
+      </div>
+      <p>Too many directions keep the contamination in the condition; too few throw away genuine noise variation. The paper also proposes a direct procedure for when the right <em>k</em> is unknown: train a separate model on the same data with additional injected signals of known form, test how well those signals are detected for different values of <em>k</em>, and use the best value with the model trained without the injected signals.</p>
+
+      <h2 id="s10">10. Limitations and what comes next</h2>
+      <ul class="plain">
+        <li><strong>Synthetic data only.</strong> All experiments use simulated light curves with injected sinusoids, which lets us know the truth. Nullasar has not yet been validated on real quasars, which bring measurement errors, gaps and possibly non-sinusoidal signals.</li>
+        <li><strong>Uniform sampling.</strong> Real surveys sample unevenly (weather, seasons, scheduling). The framework should extend to this, for example by feeding time stamps to the model, but that is untested.</li>
+        <li><strong>Fixed length.</strong> The model generates T = 256 points, so it cannot capture variability slower than that window. Stitching together surveys (e.g. CRTS and ZTF) could give 20-year curves.</li>
+        <li><strong>Contamination at realistic levels,</strong> and multi-band data, are the next things to test.</li>
+      </ul>
+
+      <h2 id="s11">Takeaways</h2>
+      <ul class="plain">
+        <li><strong>A null hypothesis is a generative model.</strong> Any "is this anomalous?" test inherits the biases of the simulator that defines normal. In our simulations, learning that simulator from data matched or beat fitting a hand-written one, including when the hand-written family was correct.</li>
+        <li><strong>Population-level training acts like a learned prior.</strong> It protects against per-example estimates that overfit, here a fit that absorbs the signal.</li>
+        <li><strong>Learned nulls are only as clean as their data</strong>, but a low-rank bottleneck on the conditioning vector can restore robustness without retraining.</li>
+      </ul>
+
+      <h2>Glossary</h2>
+      <details class="more"><summary>Show the glossary</summary>
+      <ul class="plain">
+        <li><strong>Light curve:</strong> brightness of one object over time.</li>
+        <li><strong>AR(1) / DRW:</strong> a noise model where each value depends on the previous one (DRW is its continuous-time version). AR(2) depends on two previous values.</li>
+        <li><strong>Periodogram:</strong> power of the signal at each frequency, from the Fourier transform.</li>
+        <li><strong>Null hypothesis / p-value:</strong> the "nothing interesting" explanation, and the probability it would produce data at least as extreme as observed.</li>
+        <li><strong>ROC / AUC:</strong> detection quality across all thresholds; AUC 1.0 is perfect, 0.5 is chance.</li>
+        <li><strong>Flow matching:</strong> training a network to predict the velocity that transports noise to data along simple paths.</li>
+      </ul>
+      </details>
+
+      <h2 id="cite">Code, citation and acknowledgments</h2>
+      <p>Nullasar is open source and can reproduce the data used in our paper: <a href="https://github.com/NadavSellamWork/Nullasar" target="_blank" rel="noreferrer">github.com/NadavSellamWork/Nullasar</a>.</p>
+      <details class="more"><summary>BibTeX</summary>
+<pre class="bib">@article{sellam2026nullasar,
+  title   = {Moving Beyond the DRW Model: Learning Quasar Variability with Generative Models},
+  author  = {Sellam, Nadav Bojan and Park, Kevin and Bronstein, Alex and Haiman, Zolt{\'a}n},
+  year    = {2026},
+  journal = {arXiv preprint arXiv:2611.15040},
+  eprint  = {2611.15040},
+  archivePrefix = {arXiv},
+  primaryClass  = {astro-ph.GA}
+}</pre>
+      </details>
+      <p class="note">This research was supported by ERC grant Bright-BHBs (grant agreement no. 101200084). Views and opinions expressed are those of the authors only and do not necessarily reflect those of the European Union or the European Research Council Executive Agency.</p>
+
+      </article>
+    </main>
+
+    <footer>
+      <div class="wrap">
+        <a href="https://scholar.google.com/citations?user=3N-QKKYAAAAJ&amp;hl=en" target="_blank" rel="noreferrer">Google Scholar</a>
+        <a href="https://www.linkedin.com/in/nadav-bojan-sellam-611115277" target="_blank" rel="noreferrer">LinkedIn</a>
+        <p>© 2026 Nadav Bojan Sellam</p>
+      </div>
+    </footer>
+    <script src="../../quasar-demos.js"></script>
+    <script>
+      bhDemo({canvas:"b-canvas",dist:"b-d",play:"b-play",fly:"b-fly",reset:"b-reset",read:"b-read"});
+      nullDemo({canvas:"n-canvas",proc:"n-proc",model:"n-model",snr:"n-snr",next:"n-new",fit:"n-fit",read:"n-read"});
+      flowDemo({canvas:"f-canvas",t:"f-t",play:"f-play",read:"f-read"});
+      screeDemo({canvas:"k-canvas",k:"k-k",kv:"k-v",read:"k-read"});
+      pcaDemo({canvas:"p-canvas",sig:"p-sig",phi:"p-phi",proj:"p-proj",read:"p-read"});
+    </script>
+  </body>
+</html>

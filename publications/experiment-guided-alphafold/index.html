@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Experiment-guided AlphaFold · Nadav Bojan Sellam</title>
+    <meta name="description" content="Guiding an AlphaFold3 diffusion prior with NMR, X-ray and cryo-EM likelihoods to sample measurement-consistent protein ensembles, without retraining." />
+    <meta property="og:title" content="Experiment-guided AlphaFold · Nadav Bojan Sellam" />
+    <meta property="og:description" content="Guiding an AlphaFold3 diffusion prior with NMR, X-ray and cryo-EM likelihoods to sample measurement-consistent protein ensembles, without retraining." />
+    <meta property="og:type" content="article" />
+    <link rel="stylesheet" href="../../style.css" />
+  </head>
+  <body>
+    <a class="skip" href="#main">Skip to content</a>
+    <header class="site">
+      <div class="wrap">
+        <a class="brand" href="../../">Nadav Bojan Sellam</a>
+        <nav aria-label="Primary">
+          <a href="../../#about">About</a>
+          <a href="../../cv/">CV</a>
+          <a href="../../publications/" aria-current="page">Publications</a>
+        </nav>
+      </div>
+    </header>
+
+    <main id="main" class="wrap narrow">
+      <a class="back" href="../">← All publications</a>
+      <article class="article">
+        <div class="badges"><span class="badge hot">GEM @ ICLR 2025 · Spotlight</span><span class="badge">ICML 2025</span><span class="badge hot">Nature Biotechnology 2026</span></div>
+        <h1 style="margin-top:10px">Experiment-guided AlphaFold</h1>
+        <p class="authors">Sai Advaith Maddipatla*, <span class="me">Nadav Bojan Sellam*</span>, Meital Bojan*, Volodymyr Masalitin, Sanketh Vedula, Paul Schanda, Ailie Marx, Alex M. Bronstein</p>
+        <p class="note">* Equal contribution in the ICML version.</p>
+        <div class="pl"><a href="https://www.nature.com/articles/s41587-026-03166-5" target="_blank" rel="noreferrer">Nature Biotechnology</a><a href="https://arxiv.org/abs/2502.09372" target="_blank" rel="noreferrer">arXiv</a><a href="https://www.biorxiv.org/content/10.1101/2025.10.11.681796v1" target="_blank" rel="noreferrer">bioRxiv</a><a href="https://github.com/sai-advaith/guided_alphafold" target="_blank" rel="noreferrer">Code</a></div>
+        <nav class="series" aria-label="Research line"><p>Research line</p><ol><li><a href="../chroma-ensembles/"><strong>Ensembles from electron density</strong><span>2024 · Joint guidance on X-ray density</span></a></li><li class="now" aria-current="page"><strong>Experiment-guided AlphaFold</strong><span>2025–26 · Stronger prior, more experimental observations</span></li><li><a href="../seek-and-you-shall-fold/"><strong>Seek and You Shall Fold</strong><span>2025 · Guidance without gradients</span></a></li></ol></nav>
+
+      <div class="callout"><strong>In short.</strong> AlphaFold3 is very good at predicting a protein's structure, but it tends to return one dominant shape, while real proteins move between many. We keep AlphaFold3 as a <strong>prior</strong> and steer its diffusion sampler with <strong>experimental measurements</strong> from NMR, X-ray crystallography and cryo-EM, with no retraining. On a benchmark of 91 NMR targets, guided ensembles satisfied the measured distance restraints better than the deposited PDB ensemble in <strong>70 cases (77%)</strong>, against 15 cases (17%) for unguided AlphaFold3. Those restraints are also the guidance objective and are scored on the ensemble average, so section 9 separates this fit from the independent checks.</div>
+      <dl class="spec"><dt>Problem</dt><dd>Posterior sampling of protein ensembles given a sequence and experimental measurements.</dd><dt>Prior</dt><dd>AlphaFold3 diffusion module, run through Protenix, an open PyTorch reimplementation. Unguided baselines use the official AlphaFold3.</dd><dt>Method</dt><dd>Joint likelihood guidance of 16 samples and force-field relaxation. X-ray ensembles are then pruned to at most 5 structures.</dd><dt>Evaluated on</dt><dd>91 NMR targets, X-ray altloc and refinement case studies, and cryo-EM complexes.</dd><dt>Main caveat</dt><dd>Ensembles explain the data under the prior. They are not calibrated thermodynamic populations.</dd><dt>My contribution</dt><dd>With Advaith Maddipatla, I ran the X-ray crystallography case studies. I implemented the electron density forward model and contributed to the open-source code.</dd></dl>
+      
+      <p class="note">Demos marked <span class="badge">Illustration</span> are small simulations of the idea and do not run our models. Results from the work itself are in the figures marked <strong>From our paper</strong> and in the charts and tables.</p>
+      <nav class="toc" aria-label="On this page"><a href="#s1">The problem</a><a href="#s2">What experiments see</a><a href="#s3">Inverse problem</a><a href="#s4">Guidance</a><a href="#s5">Pipeline</a><a href="#s6">X-ray</a><a href="#s7">NMR</a><a href="#s8">Cryo-EM</a><a href="#eval">Reading the results</a><a href="#from-chroma">From our first paper</a><a href="#s9">Limitations</a><a href="#versions">Versions</a><a href="#cite">Code &amp; cite</a></nav>
+
+      <h2>One project, several venues</h2>
+      <ul class="timeline">
+        <li><span class="when">2025</span> <strong>GEM workshop @ ICLR 2025</strong> (Spotlight): <em>Inverse problems with experiment-guided AlphaFold.</em></li>
+        <li><span class="when">2025</span> <strong>ICML 2025</strong>: the full conference paper (<a href="https://arxiv.org/abs/2502.09372" target="_blank" rel="noreferrer">arXiv:2502.09372</a>).</li>
+        <li><span class="when">2025</span> <strong>bioRxiv</strong>: <em>Experiment-guided AlphaFold3 resolves accurate protein ensembles</em> (<a href="https://www.biorxiv.org/content/10.1101/2025.10.11.681796v1" target="_blank" rel="noreferrer">preprint</a>).</li>
+        <li><span class="when">2026</span> <strong>Nature Biotechnology</strong>: <a href="https://www.nature.com/articles/s41587-026-03166-5" target="_blank" rel="noreferrer"><em>Experiment-guided AlphaFold3 resolves measurement-consistent protein ensembles.</em></a></li>
+      </ul>
+
+      <h2 id="s1">1. The problem: one sequence, many shapes</h2>
+      <p>A protein is a chain of amino acids that folds into a 3D structure, and that structure largely determines what it does. But a protein is not a rigid object. Loops swing, side chains flip, and whole segments can switch between distinct arrangements. The right description is an <strong>ensemble</strong>: a collection of conformations.</p>
+      <p>AlphaFold changed structural biology by predicting structures from sequence with close to experimental accuracy. Its training objective, however, pushes it toward a single "most probable" structure, and it does not know the conditions of a particular experiment. Two nearly identical sequences crystallized differently can adopt different shapes, and AlphaFold3 will predict almost the same thing for both.</p>
+      <figure><img src="../../assets/af3/covid.png" alt="Two crystal structures of the SARS-CoV-2 ORF8 protein differing at three loops, with AlphaFold3 and guided predictions." loading="lazy" /><figcaption><strong>From our paper.</strong> SARS-CoV-2 ORF8 (104 residues) in two crystal structures that differ by one mutation (L67S) but have different shapes at three loops (A). AlphaFold3 predicts practically the same structure for both, so it misses each one somewhere (B). Guiding with each electron density produces ensembles that fit both (C).</figcaption></figure>
+
+      <h2 id="s2">2. Experiments already measure ensembles</h2>
+      <p>The major experimental methods do not photograph one molecule. They report averages over a huge number of them:</p>
+      <ul class="plain">
+        <li><strong>X-ray crystallography</strong> gives an <em>electron density map</em> averaged over trillions of molecules in a crystal. Flexible regions appear blurred, and some regions show two clear alternate conformations (<em>altlocs</em>).</li>
+        <li><strong>NMR spectroscopy</strong> measures proteins in solution. <em>NOE</em> signals reveal which atoms are close, typically under about 6 Å, averaged over the ensemble and over time.</li>
+        <li><strong>Cryo-EM</strong> images frozen particles and reconstructs a 3D <em>electrostatic potential map</em>, which can be limited in resolution in flexible regions.</li>
+      </ul>
+      <p>That creates a mismatch. The measurement describes a distribution, while the predictor returns something close to a point. Our goal is to close that gap.</p>
+
+      <h2 id="s3">3. Structure determination as an inverse problem</h2>
+      <p>For readers from ML, this is a classic inverse problem. We know how to simulate the measurement from a structure (the <em>forward model</em>), and we want to go the other way. The data alone do not determine the answer, so we need a prior. Bayes' rule gives the recipe:</p>
+      <p style="text-align:center"><em>p(𝒳 | a, y) ∝ p(y | 𝒳, a) · p(𝒳 | a)</em></p>
+      <p>Here <em>a</em> is the sequence, <em>y</em> the experimental data, and <em>𝒳 = (X₁, …, Xₙ)</em> an ensemble of structures. <strong>AlphaFold3 supplies the prior</strong> <em>p(𝒳 | a)</em>, and the <strong>physics of the instrument supplies the likelihood</strong> <em>p(y | 𝒳, a)</em>.</p>
+      <div class="callout">The key detail: the prior factorizes over ensemble members, but the likelihood does not. An experiment sees the <em>average</em> of the ensemble, so the members must be sampled <strong>jointly</strong>. We introduced this in our <a href="../chroma-ensembles/#s4">earlier paper on crystallographic ensembles</a>, which has an interactive demo of the effect.</div>
+      <p>Each experiment becomes a differentiable log-likelihood term:</p>
+      <ul class="plain">
+        <li><strong>Electron density:</strong> the L1 distance between the observed map and the mean density calculated from the ensemble.</li>
+        <li><strong>NOE restraints:</strong> a squared penalty when the linear ensemble-average distance between two atoms falls outside its measured bounds. This is a simplification, because the NOE signal scales roughly as r⁻⁶ and close conformers dominate it. A pair spending half its time at 3 Å and half at 9 Å has a linear average of 6 Å but an r⁻⁶ average of about 3.4 Å.</li>
+        <li><strong>Substructure:</strong> a quadratic penalty that holds known atoms in place, useful when refining only one segment.</li>
+      </ul>
+
+      <h2 id="s4">4. Steering the diffusion sampler</h2>
+      <p>AlphaFold3 generates coordinates with a diffusion model: it starts from noise and denoises step by step using a learned score. We run <em>n</em> copies at once and add one more force at every step, the gradient of the experimental log-likelihood:</p>
+      <p style="text-align:center"><em>score of each member (AlphaFold3) + η · ∇<sub>𝒳</sub> log p(y | X₁, …, Xₙ, a)</em></p>
+      <p>The scale <em>η</em> interpolates between trusting the prior and trusting the data. Because the guidance happens only at sampling time, the AlphaFold3 network is <strong>never retrained</strong>.</p>
+      <details class="more"><summary>Implementation details for practitioners</summary>
+        <ul class="plain">
+          <li><strong>Gradient.</strong> The likelihood gradient is taken with respect to the noisy coordinates of the whole ensemble, then rescaled to the norm of the denoising direction before being added with weight <em>η</em>. It is also clipped for numerical stability.</li>
+          <li><strong>Guidance scale.</strong> <em>η</em> = 0.1 for electron density and 0.3 for order parameters. For NOE guidance we tried values from 0.1 to 0.5 and kept the best-performing result.</li>
+          <li><strong>Density likelihood.</strong> An L1 (Laplace) term on the target region, plus a weak substructure term (<em>λ</em> = 0.1) that anchors the remaining atoms.</li>
+          <li><strong>Ensemble.</strong> <em>n</em> = 16 samples, with symmetry mates included in the density calculation.</li>
+        </ul>
+      </details>
+      <div class="demo">
+        <h3>Try it: from collapsed prior to measured ensemble <span class="badge">Illustration</span></h3>
+        <p class="tagline">A one-dimensional cartoon, not the actual model. The prior puts almost all its weight on one conformation, while the experiment says a second conformation is substantially populated. Increase the guidance strength to move from the prior toward the measurement-consistent ensemble.</p>
+        <div class="ctrl"><label>Guidance strength <input id="g-slider" type="range" min="0" max="100" value="0" /></label></div>
+        <canvas id="g-canvas" role="img" aria-label="A prior density with one dominant peak shifting toward a two-peaked experimental density as guidance increases." width="700" height="294"></canvas>
+        <div class="readout" aria-live="polite" id="g-read"></div>
+      </div>
+
+      <h2 id="s5">5. The full pipeline: guide, relax, prune</h2>
+      <figure><img src="../../assets/af3/method.png" alt="Method overview: guided diffusion, force-field relaxation and ensemble pruning." loading="lazy" /><figcaption><strong>From our paper.</strong> At each diffusion step, an ensemble is generated and its likelihood is computed against the experimental inputs. The gradient guides sampling. The final ensemble is relaxed with a force field and pruned.</figcaption></figure>
+      <ul class="plain">
+        <li><strong>Guided sampling</strong> draws a joint ensemble consistent with the data.</li>
+        <li><strong>Force-field relaxation.</strong> Strong guidance can overfit noise and produce broken bonds or clashes. We filter those samples and relax the rest with a standard AMBER force field, so the output is chemically plausible.</li>
+        <li><strong>Matching-pursuit selection (X-ray).</strong> We greedily keep the structure that most improves the fit, up to five structures, and stop early if R-free, the crystallographic validation loss, rises. The result is a small ensemble that still explains the data. The journal version also offers occupancy optimization as an alternative.</li>
+      </ul>
+      <div class="demo"><h3>Try it: pruning an ensemble with matching pursuit <span class="badge">Illustration</span></h3><p class="tagline">Fourteen candidate conformations sit on a line. Each click adds the one that most reduces the L1 error against the data. Notice that the selection stops by itself, with far fewer structures than it started with.</p><div class="ctrl"><button id="m-next" type="button">Add best candidate</button><button id="m-reset" type="button">Reset</button></div><canvas id="m-canvas" role="img" aria-label="A target density with three peaks, candidate conformations below it, and the density of the selected subset." width="700" height="320"></canvas><div class="readout" aria-live="polite" id="m-read"></div></div>
+
+      <h2 id="s6">6. X-ray crystallography: finding what a single model misses</h2>
+      <p>We tested density guidance on three kinds of heterogeneity that unguided AlphaFold3 consistently gets wrong: the same protein captured in different shapes across experiments, identical segments that fold differently in homologous proteins, and two conformations coexisting <em>within a single crystal</em>.</p>
+      <p>The last case is the most striking. In human NBR1 (PDB 4OLE), a nine-residue segment was modeled as two alternate conformations. AlphaFold3 predicts only one and misses the helix entirely. The guided ensemble recovers both.</p>
+      <figure><img src="../../assets/af3/altlocs.png" alt="Deposited structure, AlphaFold3 and guided ensemble for the 4OLE altloc region." loading="lazy" /><figcaption><strong>From our paper.</strong> NBR1 (PDB 4OLE), residues 423–431. Left: the two deposited conformations. Middle: AlphaFold3 finds only conformation B. Right: the density-guided ensemble covers both and better explains the observed density.</figcaption></figure>
+      <p>Most of the gain in density fit comes from guidance itself. On the 12 altloc targets, mean cosine similarity is 0.723 unguided, 0.784 with independent guidance and 0.795 with joint guidance, which is higher than independent guidance in 11 of 12 cases. The clearer benefit of joint sampling, carried over from our <a href="../chroma-ensembles/#s4">earlier paper</a>, is coverage: guiding each sample independently tends to leave the ensemble in one state, while guiding them together spreads it across the states that the density requires.</p>
+      <figure><img src="../../assets/af3/noniid.png" alt="Violin plots of conformations for twelve proteins under unguided, independent and joint guidance." loading="lazy" /><figcaption><strong>From our paper.</strong> Each violin shows where ensemble members lie between the two known conformations (negative and positive values) for 12 proteins. Unguided AlphaFold3 (red) and independent guidance (blue) often stay in one mode. Joint, non-i.i.d. guidance (orange) typically covers both.</figcaption></figure>
+      <p>On an extended set of 15 targets, with segments of up to 22 residues, guidance improved the density fit over unguided AlphaFold3 in <strong>all 15</strong>. It matched or exceeded the deposited PDB model in <strong>4 of 15</strong>. That is the expected pattern, since PDB models are carefully refined against these same maps. The journal version adds practical uses: filling loops missing from deposited models, recovering poorly predicted peptides, and guiding an entire chain iteratively.</p>
+
+      <h2 id="s7">7. NMR: accurate ensembles in minutes</h2>
+      <p>NMR structures are usually computed with restrained molecular dynamics. Simulating conformers one at a time tends to give overly rigid ensembles, and simulating them jointly can take days even for a 76-residue protein like ubiquitin. NOE-guided AlphaFold3 takes <strong>minutes</strong>: about 8 minutes for the 16-member ensembles used here, on NVIDIA H100 or L40S hardware.</p>
+      <figure><img src="../../assets/af3/nmr.png" alt="NOE restraint violations for the NMR structure, AlphaFold3 and two guidance strengths on protein 2K52." loading="lazy" /><figcaption><strong>From our paper.</strong> Violated NOE restraints on MJ1198 (PDB 2K52), with the percentage violated and the median violation below each model: deposited NMR structure 10.6% and 0.32 Å, AlphaFold3 23.1% and 0.79 Å, guidance strength 0.2 11.6% and 0.50 Å, guidance strength 0.5 9.6% and 0.33 Å.</figcaption></figure>
+      <div class="bars">
+        <h3>From the journal paper: targets where the model satisfies NOE restraints better than the PDB ensemble (of 91)</h3>
+        <div class="bar"><span>Unguided AlphaFold3</span><div class="track"><i style="width:17%"></i></div><b>15 (17%)</b></div>
+        <div class="bar hot"><span>NOE-guided AlphaFold3</span><div class="track"><i style="width:77%"></i></div><b>70 (77%)</b></div>
+      </div>
+      <p>To test the dynamics with independent data, we compared ubiquitin ensembles with <strong>S² order parameters</strong>, which come from a separate type of NMR experiment and measure how much each backbone N–H bond moves. These values were <em>not</em> used for guidance in the first three rows below.</p>
+      <div class="bars">
+        <h3>From our papers: correlation with experimental S² on ubiquitin</h3>
+        <div class="bar"><span>AlphaFold3</span><div class="track"><i style="width:47%"></i></div><b>r = 0.47</b></div>
+        <div class="bar"><span>NOE guidance, independent</span><div class="track"><i style="width:52%"></i></div><b>r = 0.52</b></div>
+        <div class="bar hot"><span>NOE guidance, joint</span><div class="track"><i style="width:72%"></i></div><b>r = 0.72</b></div>
+        <div class="bar"><span>Ensemble MD (PDB 1XQQ)*</span><div class="track"><i style="width:87%"></i></div><b>r = 0.87</b></div>
+        <div class="bar hot"><span>NOE + S² guidance*</span><div class="track"><i style="width:93%"></i></div><b>r = 0.93</b></div>
+      </div>
+      <p class="note">Bar length shows r. First three rows: ICML paper. * These two are fitted to dynamics data, so they measure fit and are not an independent check. Values from the Nature Biotechnology paper.</p>
+
+      <h2 id="s8">8. Cryo-EM, and combining experiments</h2>
+      <p>The same recipe applies to cryo-EM by swapping the likelihood. On the insulin receptor, AlphaFold3 tends to make the two halves too symmetric; map guidance produces conformations that agree with both the symmetric and asymmetric states. On an amyloid-beta fibril, where AlphaFold3 mispredicts the dimer interface, guidance agrees with the density.</p>
+      <p>Because log-likelihoods add, experiments can be <strong>combined</strong>. For the human RIPK3 amyloid fibril, guiding with the cryo-EM map alone improved the density fit but left the local geometry poor. Adding NMR-derived restraints significantly improved local accuracy, at a reasonable cost in density fit.</p>
+
+      <h2 id="eval">9. How to read these results</h2>
+      <ul class="plain">
+        <li><strong>Fit is not validation.</strong> NOE violations and density agreement are computed on the same data used for guidance, so improvement over unguided sampling is partly expected. The NOE guidance scale was also chosen per target by best result, and R-free is used to stop X-ray pruning, so neither is a fully held-out measure.</li>
+        <li><strong>The PDB comparison favors the guided objective.</strong> The 70-of-91 result scores restraints on the ensemble average, which is what guidance optimizes. Deposited NMR bundles are generally calculated so that each conformer satisfies the restraints, so this comparison does not show that guided ensembles are more accurate structures.</li>
+        <li><strong>Independent evidence.</strong> The stronger checks use data that guidance did not see: S² order parameters (r = 0.72 vs. 0.47 for AlphaFold3 on ubiquitin), and ANSURR, which compares model rigidity with chemical shifts. Against deposited PDB ensembles, guided ensembles improved the ANSURR RMSD score in 92% of cases, but the correlation score in only 54%.</li>
+        <li><strong>The PDB is a reference, not ground truth.</strong> Deposited models are themselves fits to the data, and for X-ray they often include manually placed waters and ions that our models lack.</li>
+        <li><strong>Other generative baselines.</strong> The papers also compare against AlphaFlow, ESMFlow and, in the journal supplement, BioEmu and AFCluster.</li>
+      </ul>
+
+      <h2 id="from-chroma">What changed from our first paper</h2>
+      <p>This project continues our <a href="../chroma-ensembles/">earlier paper on crystallographic ensembles</a>, which used the Chroma diffusion model as its prior. The core idea, joint guidance through a shared likelihood, stays the same. Almost everything around it changes:</p>
+      <div class="table-wrap"><table class="results compare"><thead><tr><th>Aspect</th><th>First paper (2024, Chroma prior)</th><th>This work</th></tr></thead><tbody><tr><td>Prior</td><td>Chroma backbone diffusion, plus a side-chain packer</td><td>AlphaFold3 (via Protenix), all-atom</td></tr><tr><td>Sequence</td><td>Backbone sampler is not sequence-conditioned</td><td>Sequence-conditioned prior</td></tr><tr><td>Experimental observations</td><td>X-ray density</td><td>X-ray, NMR, cryo-EM and combinations</td></tr><tr><td>Density likelihood</td><td>L2 (Gaussian)</td><td>L1 (Laplace)</td></tr><tr><td>Target size</td><td>Altloc regions of 3–11 residues, with the rest held fixed</td><td>Regions up to 22 residues, plus iterative whole-chain guidance</td></tr><tr><td>After sampling</td><td>Matching pursuit</td><td>Force-field relaxation, plus X-ray pruning with a validation stop</td></tr><tr><td>Evaluation</td><td>Altloc case studies</td><td>91 NMR targets, plus X-ray and cryo-EM case studies</td></tr></tbody></table></div>
+      <p><strong>The gain is mainly generality.</strong> On the same 12 X-ray altloc targets, guided AlphaFold3 had the higher density agreement in 7 or 8, tied in 2, and guided Chroma was higher in 2 or 3 (mean cosine similarity 0.793–0.795 vs. 0.788). The ranges reflect two different values reported for 6JF2 in the ICML appendix. So the stronger prior does not dramatically improve the fit on short segments. What it adds is sequence conditioning, longer regions, and data types that Chroma could not handle well.</p>
+
+      <h2 id="prior">How this differs from prior work</h2>
+      <p>Fadini et al. fit a <em>single</em> conformer to density by optimizing AlphaFold's MSA input. Levy et al. solve inverse problems with a Chroma prior but evaluate on synthetic data. Learned ensemble generators such as AlphaFlow do not condition on a specific experiment. Here, a sequence-conditioned all-atom prior is guided jointly by real measurements from several modalities.</p>
+
+      <h2 id="s9">10. Limitations and what comes next</h2>
+      <ul class="plain">
+        <li><strong>Ensembles are explanations, not populations.</strong> They explain the data under the AlphaFold3 prior. Their mixture weights should not be read as calibrated thermodynamic populations. The journal supplement takes a first step with force-field energy reweighting.</li>
+        <li><strong>Guidance can overfit.</strong> Strength must be controlled, especially with low-resolution or poorly phased maps.</li>
+        <li><strong>Simplified NOE averaging.</strong> The NOE term averages distances linearly and not as r⁻⁶, so it can misjudge restraints in strongly heterogeneous ensembles.</li>
+        <li><strong>Mainly proteins so far.</strong> Ligands, metals, modifications, structural waters and complex symmetries remain limited.</li>
+        <li><strong>Next:</strong> linking ensemble weights to real populations, and large-scale re-analysis of existing experimental data.</li>
+      </ul>
+
+      <h2>Takeaways</h2>
+      <ul class="plain">
+        <li><strong>A strong predictor is also a prior.</strong> A pretrained model can solve new inverse problems with no retraining.</li>
+        <li><strong>When the measurement is an average, sample jointly.</strong> Guiding samples independently optimizes a different objective from the one the instrument defines.</li>
+        <li><strong>Composable likelihoods are powerful.</strong> New data types only need a differentiable forward model.</li>
+      </ul>
+
+      <h2>Glossary</h2><details class="more"><summary>Show the glossary</summary><ul class="plain"><li><strong>Conformation:</strong> one particular 3D arrangement of a protein.</li><li><strong>Ensemble:</strong> a set of conformations that together describe a flexible protein.</li><li><strong>Altloc:</strong> an alternate location modeled for atoms in a crystal structure.</li><li><strong>Electron density:</strong> the 3D map of electrons reconstructed from X-ray diffraction.</li><li><strong>NOE:</strong> an NMR effect that reports which atoms are close in space.</li><li><strong>S² order parameter:</strong> an NMR measure of how rigid a bond is, where 1 means fully rigid.</li><li><strong>PDB:</strong> the Protein Data Bank, the public archive of experimental structures.</li></ul></details>
+
+      <h2 id="versions">How the versions differ</h2>
+      <p>The workshop and ICML versions introduce the inverse-problem formulation and demonstrate it on crystallographic densities and NMR. The journal version adds cryo-EM and joint multi-modal guidance, S² and other dynamics data as guidance terms, a 91-target NMR benchmark, and energy-based reweighting.</p>
+
+      <h2 id="cite">Code and citation</h2>
+      <p>Code: <a href="https://github.com/sai-advaith/guided_alphafold" target="_blank" rel="noreferrer">github.com/sai-advaith/guided_alphafold</a> (archived version: <a href="https://doi.org/10.5281/zenodo.17307005" target="_blank" rel="noreferrer">Zenodo</a>). Structures and metrics: <a href="https://doi.org/10.7910/DVN/PLYUHN" target="_blank" rel="noreferrer">doi.org/10.7910/DVN/PLYUHN</a>.</p>
+      <details class="more"><summary>BibTeX</summary><pre class="bib">@article{maddipatla2026experiment,
+  title   = {Experiment-guided {AlphaFold3} resolves measurement-consistent protein ensembles},
+  author  = {Maddipatla, Advaith and Sellam Bojan, Nadav and Bojan, Meital and Masalitin, Volodymyr and
+             Vedula, Sanketh and Schanda, Paul and Marx, Ailie and Bronstein, Alex M.},
+  journal = {Nature Biotechnology},
+  year    = {2026},
+  doi     = {10.1038/s41587-026-03166-5}
+}
+
+@inproceedings{maddipatla2025inverse,
+  title     = {Inverse problems with experiment-guided {AlphaFold}},
+  author    = {Maddipatla, Advaith and Sellam, Nadav Bojan and Bojan, Meital and
+               Vedula, Sanketh and Schanda, Paul and Marx, Ailie and Bronstein, Alex M.},
+  booktitle = {Proceedings of the 42nd International Conference on Machine Learning},
+  series    = {PMLR},
+  volume    = {267},
+  year      = {2025}
+}</pre></details>
+
+      </article>
+    </main>
+
+    <footer>
+      <div class="wrap">
+        <a href="https://scholar.google.com/citations?user=3N-QKKYAAAAJ&amp;hl=en" target="_blank" rel="noreferrer">Google Scholar</a>
+        <a href="https://www.linkedin.com/in/nadav-bojan-sellam-611115277" target="_blank" rel="noreferrer">LinkedIn</a>
+        <p>© 2026 Nadav Bojan Sellam</p>
+      </div>
+    </footer>
+    <script src="../../demos.js"></script>
+    <script src="../../paper-demos.js"></script>
+    <script>
+      guidanceDemo("g-canvas","g-slider","g-read");
+      pursuitDemo({canvas:"m-canvas",next:"m-next",reset:"m-reset",read:"m-read"});
+    </script>
+  </body>
+</html>

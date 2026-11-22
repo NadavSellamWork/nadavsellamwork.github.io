@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Publications · Nadav Bojan Sellam</title>
+    <meta name="description" content="Publications of Nadav Bojan Sellam on generative models, guidance, representations, and scientific machine learning." />
+    <meta property="og:title" content="Publications · Nadav Bojan Sellam" />
+    <meta property="og:description" content="Publications of Nadav Bojan Sellam on generative models, guidance, representations, and scientific machine learning." />
+    <meta property="og:type" content="website" />
+    <link rel="stylesheet" href="../style.css" />
+  </head>
+  <body>
+    <a class="skip" href="#main">Skip to content</a>
+    <header class="site">
+      <div class="wrap">
+        <a class="brand" href="../">Nadav Bojan Sellam</a>
+        <nav aria-label="Primary">
+          <a href="../#about">About</a>
+          <a href="../cv/">CV</a>
+          <a href="../publications/" aria-current="page">Publications</a>
+        </nav>
+      </div>
+    </header>
+
+    <main id="main" class="wrap">
+      <h1>Publications</h1>
+      <p class="sub">Each card is one project. Projects that appeared at several venues (workshop, conference, journal) are bundled on a single page. Also on <a href="https://scholar.google.com/citations?user=3N-QKKYAAAAJ&amp;hl=en" target="_blank" rel="noreferrer">Google Scholar</a>.</p>
+      <h2 class="pub-group">Guiding generative models with experimental observations</h2>
+      <p class="pub-note">One line of work: we first introduced joint ensemble guidance on crystallographic electron densities, Experiment-guided AlphaFold extended it to NMR and cryo-EM observations, and Seek and You Shall Fold removed the need for gradients.</p>
+      <ul class="cards">
+        <li class="card">
+          <a href="chroma-ensembles/">
+            <div class="thumb"><img src="../assets/chroma/ensembles.png" alt="" loading="lazy" /></div>
+            <div class="card-body">
+              <div class="badges"><span class="badge hot">MLSB @ NeurIPS 2024 · Contributed talk</span></div>
+              <h3>Generative modeling of protein ensembles guided by crystallographic electron densities</h3>
+              <p class="authors">Sai Advaith Maddipatla*, <span class="me">Nadav Bojan Sellam*</span>, et al.</p>
+              <p class="blurb">Non-i.i.d. diffusion guidance: couple an ensemble through a shared likelihood to recover alternate backbone conformations from raw electron density.</p>
+              <span class="more">Read the full story →</span>
+            </div>
+          </a>
+        </li>
+        <li class="card">
+          <a href="experiment-guided-alphafold/">
+            <div class="thumb"><img src="../assets/af3/method.png" alt="" loading="lazy" /></div>
+            <div class="card-body">
+              <div class="badges"><span class="badge hot">GEM @ ICLR 2025 · Spotlight</span><span class="badge">ICML 2025</span><span class="badge hot">Nature Biotechnology 2026</span></div>
+              <h3>Experiment-guided AlphaFold</h3>
+              <p class="authors">Sai Advaith Maddipatla*, <span class="me">Nadav Bojan Sellam*</span>, Meital Bojan*, et al.</p>
+              <p class="blurb">Posterior sampling with AlphaFold3 as a prior and NMR, X-ray and cryo-EM likelihoods. Fits the NOE restraints used for guidance better than deposited ensembles in 70 of 91 targets.</p>
+              <span class="more">Read the full story →</span>
+            </div>
+          </a>
+        </li>
+        <li class="card">
+          <a href="seek-and-you-shall-fold/">
+            <div class="thumb"><img src="../assets/seek/pairwise.jpeg" alt="" loading="lazy" /></div>
+            <div class="card-body">
+              <div class="badges"><span class="badge hot">MLSB @ EurIPS 2025</span></div>
+              <h3>Seek and You Shall Fold</h3>
+              <p class="authors"><span class="me">Nadav Bojan Sellam*</span>, Meital Bojan*, Paul Schanda, Alex M. Bronstein</p>
+              <p class="blurb">Gradient-free guidance: a genetic algorithm in a diffusion model's latent space optimizes black-box objectives such as NMR restraints.</p>
+              <span class="more">Read the full story →</span>
+            </div>
+          </a>
+        </li>
+        </ul>
+      <h2 class="pub-group">Representations, flow models and scientific ML</h2>
+      <ul class="cards">
+        <li class="card">
+          <a href="local-protein-environments/">
+            <div class="thumb"><img src="../assets/lpe/flow.png" alt="" loading="lazy" /></div>
+            <div class="card-body">
+              <div class="badges"><span class="badge">GenBio @ ICML 2025</span><span class="badge hot">ICLR 2026</span></div>
+              <h3>Representing local protein environments with machine learning force fields</h3>
+              <p class="authors">Meital Bojan*, Sanketh Vedula*, Sai Advaith Maddipatla, <span class="me">Nadav Bojan Sellam</span>, et al.</p>
+              <p class="blurb">Force-field embeddings as transferable protein representations, with structured geometry, likelihoods, and state-of-the-art chemical shift prediction.</p>
+              <span class="more">Read the full story →</span>
+            </div>
+          </a>
+        </li>
+        <li class="card">
+          <a href="correcting-flows/">
+            <div class="thumb"><img src="../assets/flows/correction.jpeg" alt="" loading="lazy" /></div>
+            <div class="card-body">
+              <div class="badges"><span class="badge">arXiv 2026</span></div>
+              <h3>Correcting Flows with Marginal Matching</h3>
+              <p class="authors">Meital Bojan, <span class="me">Nadav Bojan Sellam</span>, Ev Zisselman, Aviv Tamar</p>
+              <p class="blurb">A learned corrector targeting reversed-ODE marginals. One extra call takes CIFAR-10 FID from 4.34 to 3.45, matching about 20 more RK4 evaluations.</p>
+              <span class="more">Read the full story →</span>
+            </div>
+          </a>
+        </li>
+        <li class="card">
+          <a href="quasar-variability/">
+            <div class="thumb"><img src="../assets/quasar/misspec.png" alt="" loading="lazy" /></div>
+            <div class="card-body">
+              <div class="badges"><span class="badge">arXiv 2026</span><span class="badge">MNRAS · Review pending</span></div>
+              <h3>Moving Beyond the DRW Model: Learning Quasar Variability with Generative Models</h3>
+              <p class="authors"><span class="me">Nadav Bojan Sellam</span>, Kevin Park, Alex Bronstein, Zoltán Haiman</p>
+              <p class="blurb">A controlled study on simulated quasar light curves: what happens when the noise model is learned with flow matching, and where it breaks.</p>
+              <span class="more">Read the full story →</span>
+            </div>
+          </a>
+        </li>
+      </ul>
+      <p class="note" style="margin-top:20px">* Equal contribution.</p>
+    </main>
+
+    <footer>
+      <div class="wrap">
+        <a href="https://scholar.google.com/citations?user=3N-QKKYAAAAJ&amp;hl=en" target="_blank" rel="noreferrer">Google Scholar</a>
+        <a href="https://www.linkedin.com/in/nadav-bojan-sellam-611115277" target="_blank" rel="noreferrer">LinkedIn</a>
+        <p>© 2026 Nadav Bojan Sellam</p>
+      </div>
+    </footer>
+  </body>
+</html>

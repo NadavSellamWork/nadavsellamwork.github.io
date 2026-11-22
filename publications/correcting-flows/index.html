@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Correcting Flows with Marginal Matching · Nadav Bojan Sellam</title>
+    <meta name="description" content="A training-based predictor-corrector for flow matching that steers samples toward the marginals of the reversed ODE, improving FID on CIFAR-10 and ImageNet-64 with few extra evaluations." />
+    <meta property="og:title" content="Correcting Flows with Marginal Matching · Nadav Bojan Sellam" />
+    <meta property="og:description" content="A training-based predictor-corrector for flow matching that steers samples toward the marginals of the reversed ODE, improving FID on CIFAR-10 and ImageNet-64 with few extra evaluations." />
+    <meta property="og:type" content="article" />
+    <link rel="stylesheet" href="../../style.css" />
+  </head>
+  <body>
+    <a class="skip" href="#main">Skip to content</a>
+    <header class="site">
+      <div class="wrap">
+        <a class="brand" href="../../">Nadav Bojan Sellam</a>
+        <nav aria-label="Primary">
+          <a href="../../#about">About</a>
+          <a href="../../cv/">CV</a>
+          <a href="../../publications/" aria-current="page">Publications</a>
+        </nav>
+      </div>
+    </header>
+
+    <main id="main" class="wrap narrow">
+      <a class="back" href="../">← All publications</a>
+      <article class="article">
+        <div class="badges"><span class="badge">arXiv 2026</span></div>
+        <h1 style="margin-top:10px">Correcting Flows with Marginal Matching</h1>
+        <p class="authors">Meital Bojan, <span class="me">Nadav Bojan Sellam</span>, Ev Zisselman, Aviv Tamar</p>
+        
+        <div class="pl"><a href="https://arxiv.org/abs/2611.23134" target="_blank" rel="noreferrer">arXiv</a></div>
+
+      <div class="callout"><strong>In short.</strong> A flow model turns noise into data by following a learned vector field. Because that field is imperfect, samples drift away from the data distribution. Our key observation: if you run the <strong>same imperfect flow backward from real data</strong>, you get a path that, assuming an invertible flow and accurate integration, leads back to the data when followed forward. <strong>Marginal Matching</strong> trains a small corrector to nudge samples onto that path. On CIFAR-10, <strong>one corrector call</strong> on top of a 40-evaluation RK4 sampler improves FID from <strong>4.34 to 3.45</strong>. The same solver needs about <strong>60 evaluations</strong> to reach 3.47.</div>
+      <dl class="spec"><dt>Problem</dt><dd>Reduce the error of a trained flow model at a fixed sampling budget.</dd><dt>Base model</dt><dd>Frozen OT-CFM and I-CFM U-Nets, sampled with RK4.</dd><dt>Method</dt><dd>Train a half-size corrector (score model or robust classifier) on marginals of the reversed ODE.</dd><dt>Evaluated on</dt><dd>Unconditional CIFAR-10 and ImageNet-64, measured with FID.</dd><dt>Main caveat</dt><dd>Requires training a second model, assumes invertibility, and reports FID as point estimates.</dd><dt>My contribution</dt><dd>I worked on the cycle-consistent correction applied during sampling, which targets the error of the learned model itself and not only discretization error.</dd></dl>
+      
+      <p class="note">Demos marked <span class="badge">Illustration</span> are small simulations of the idea and do not run our models. Results from the work itself are in the figures marked <strong>From our paper</strong> and in the charts and tables.</p>
+      <nav class="toc" aria-label="On this page"><a href="#s1">The problem</a><a href="#s2">Flow matching</a><a href="#s3">Key insight</a><a href="#s4">Theory</a><a href="#s5">Correctors</a><a href="#s6">Results</a><a href="#s7">Ablations</a><a href="#eval">Reading the results</a><a href="#s8">Limitations</a><a href="#cite">Cite</a></nav>
+
+      <h2 id="s1">1. The problem: quality costs compute</h2>
+      <p>Flow-based generative models produce images, audio, molecules and robot actions by transforming simple noise into data. Generation means solving an ordinary differential equation (ODE), and every step calls a neural network. These calls are counted as the <strong>number of function evaluations (NFE)</strong>, and they are the main cost of sampling.</p>
+      <p>Fewer steps are faster but less accurate. In diffusion models, a well-known remedy is the <strong>predictor-corrector</strong> scheme: alternate between moving forward in time and refining the sample at the current time. Applying this idea to flow matching has been explored much less.</p>
+
+      <h2 id="s2">2. Background: flow matching in one paragraph</h2>
+      <p>Flow matching learns a time-dependent velocity field <em>v<sub>θ</sub>(t, x)</em>. During training, we pair a noise sample <em>x₀</em> with a data sample <em>x₁</em>, pick a point on the straight line between them, and regress the network onto the direction of that line:</p>
+      <p style="text-align:center"><em>L(θ) = E ‖ v<sub>θ</sub>(t, x<sub>t</sub>) − (x₁ − x₀) ‖²,&nbsp;&nbsp; x<sub>t</sub> = t·x₁ + (1 − t)·x₀</em></p>
+      <p>To generate, start at noise and integrate the velocity from <em>t</em> = 0 to 1. With a perfect network and solver we would land exactly on the data distribution. In practice we land on an approximation, <em>π̂₁</em>.</p>
+
+      <h2 id="s3">3. The key insight: reverse the imperfect flow</h2>
+      <p>What should a corrector aim for? The obvious answer is the training interpolation between noise and data, but those marginals are not what the learned, imperfect flow actually transports.</p>
+      <p>Flows have a useful property: they are easy to <strong>reverse</strong>. Take real data and integrate the learned field backward from <em>t</em> = 1 to 0. This traces a family of <strong>backward marginals</strong> <em>p<sup>b</sup><sub>t</sub></em>. If the flow is invertible and integrated accurately, any sample on that path, followed forward with the same model, returns to the true data distribution.</p>
+      <div class="callout">Under invertibility, even an imperfect model has a trajectory of distributions that leads to the data. We just have to steer samples onto it.</div>
+      <figure><img src="../../assets/flows/marginals.png" alt="Forward and backward marginals of a learned flow." loading="lazy" /><figcaption><strong>From our paper.</strong> Forward marginals drift away from the reversed-ODE marginals. The corrector maps each forward marginal back toward its backward counterpart.</figcaption></figure>
+      <figure class="diagram"><div class="scroll"><svg viewBox="0 0 760 230" role="img" aria-label="Predictor-corrector loop: the flow model advances a sample one step, the corrector moves it toward the backward marginal, and the loop repeats until the final image." width="760" height="230">
+        <defs><marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="dg-head"/></marker></defs>
+        <rect class="dg-box" x="10" y="30" width="130" height="58" rx="10"/><text class="dg-t" x="75" y="55" text-anchor="middle">Noise</text><text class="dg-s" x="75" y="73" text-anchor="middle">x₀ ~ N(0, I)</text>
+        <rect class="dg-main" x="190" y="30" width="170" height="58" rx="10"/><text class="dg-t" x="275" y="55" text-anchor="middle">Predictor</text><text class="dg-s" x="275" y="73" text-anchor="middle">ODE step with frozen flow</text>
+        <rect class="dg-opt" x="410" y="30" width="170" height="58" rx="10"/><text class="dg-t" x="495" y="55" text-anchor="middle">Corrector h<tspan dy="3" font-size="72%">ψ</tspan></text><text class="dg-s" x="495" y="73" text-anchor="middle">toward backward marginal</text>
+        <rect class="dg-box" x="630" y="30" width="120" height="58" rx="10"/><text class="dg-t" x="690" y="55" text-anchor="middle">Sample</text><text class="dg-s" x="690" y="73" text-anchor="middle">at t = 1</text>
+        <path class="dg-a" d="M140,59 H188" marker-end="url(#ah)"/><path class="dg-a" d="M360,59 H408" marker-end="url(#ah)"/><path class="dg-a" d="M580,59 H628" marker-end="url(#ah)"/>
+        <path class="dg-a dg-dash" d="M495,88 V125 H275 V90" marker-end="url(#ah)"/><text class="dg-s" x="385" y="143" text-anchor="middle">repeat for the next time step</text>
+        <rect class="dg-box" x="300" y="165" width="390" height="46" rx="10"/><text class="dg-t" x="495" y="184" text-anchor="middle">Training data for the corrector</text><text class="dg-s" x="495" y="201" text-anchor="middle">run the frozen flow backward from real data: x₁ → x₀</text>
+        <path class="dg-a" d="M495,165 V92" marker-end="url(#ah)"/>
+      </svg></div><figcaption>Marginal Matching. A frozen flow predicts each step, and a small learned model corrects selected steps. Its targets come from running the same flow in reverse, starting from real data.</figcaption></figure>
+      <div class="demo"><h3>Try it: correcting a flawed 2-D flow <span class="badge">Illustration</span></h3><p class="tagline">The target is eight clusters on a circle. The flow is deliberately flawed, so forward samples (blue) miss them. Gold points are the backward marginal, computed by reversing the same flawed flow from the data. The corrector here is a simple transport step toward the gold distribution, standing in for the learned model. It moves samples onto the right clusters while preserving their spread, so it does not collapse them.</p><div class="ctrl"><label>Model error <input id="c-err" type="range" min="10" max="100" value="60" /></label><label>Correct <select id="c-when"><option value="last">last step only</option><option value="all">every step</option><option value="none">never</option></select></label><label>Time <input id="c-t" type="range" min="0" max="10" value="10" /></label><button id="c-play" type="button">Play</button></div><canvas id="c-canvas" role="img" aria-label="Two scatter plots comparing a flawed flow with and without correction against the backward marginal." width="700" height="320"></canvas><div class="readout" aria-live="polite" id="c-read"></div></div>
+
+      <h2 id="s4">4. Theory: which corrections matter?</h2>
+      <p>If the forward and backward marginals match at the end, they match at every time (Lemma 3.2). More usefully, we can bound the final error. Suppose a correction at time <em>t<sub>i</sub></em> reduces the Wasserstein distance to the backward marginal by <em>ε<sub>i</sub></em>. For a field with Lipschitz constant <em>L</em>:</p>
+      <p style="text-align:center"><em>W₂(p<sup>b</sup>₁, p<sup>f</sup>₁) ≤ d₀ e<sup>L</sup> − Σ<sub>i</sub> ε<sub>i</sub> e<sup>L(1 − t<sub>i</sub>)</sup></em></p>
+      <p>This formal statement requires a Lipschitz field, and the <em>e<sup>L</sup></em> factor can make the bound loose, so we use it to reason about where corrections matter and not as a numerical prediction. It shows that steps are not equally valuable, and that the best schedule depends on how the corrector reduces error.</p>
+      <div class="demo"><h3>Try it: the value of each correction step <span class="badge">Illustration</span></h3><p class="tagline">This plots the error bound over time with one correction. Compare a fixed-size reduction with a proportional one, then move the correction to see whether its timing changes the final bound.</p><div class="ctrl"><label>Lipschitz L <input id="w-l" type="range" min="0" max="50" value="20" /> <span id="w-v">2.0</span></label><label>Error reduction <select id="w-mode"><option value="add">Fixed size</option><option value="mul">Proportional</option></select></label><label>Reduction ε <input id="w-eps" type="range" min="0" max="90" value="40" /> <span id="w-ev">0.40</span></label><label>Correct at <input id="w-step" type="range" min="0" max="10" value="0" /> <span id="w-sv">t = 0.0</span></label></div><canvas id="w-canvas" role="img" aria-label="Line chart of the error bound over time, with and without one correction step." width="700" height="320"></canvas><div class="readout" aria-live="polite" id="w-read"></div></div>
+      <p class="note">This describes the bound. Which step helps most in practice also depends on how large each ε<sub>i</sub> really is, as the ablations below show.</p>
+
+      <h2 id="s5">5. Two ways to build the corrector</h2>
+      <ul class="plain">
+        <li><strong>Score model.</strong> Learn the score of the backward marginals, the direction toward higher density, with denoising score matching. A single step along it is enough. It comes with a bound on the final distance, but it never sees forward samples during training. <em>Cost: 1 NFE.</em></li>
+        <li><strong>Robust classifier.</strong> Train a time-dependent classifier to tell forward from backward samples, and follow its gradient toward "backward". It sees both distributions, but has no theoretical guarantee. Adversarial training and gradient alignment keep its gradients useful. <em>Cost: 2 NFE.</em></li>
+      </ul>
+      <p>Both use a U-Net with half the parameters of the flow model and were trained for 100,000 steps, with convergence observed by about 30,000 to 40,000. They are trained for a fixed time grid (11 marginals on CIFAR-10, 6 on ImageNet-64).</p>
+
+      <h2 id="s6">6. Results</h2>
+      <p><strong>CIFAR-10.</strong> The fair comparison is the same base flow at a similar compute budget, so the table includes plain RK4 at higher NFE.</p>
+      <div class="table-wrap"><table class="results"><thead><tr><th>Sampler (OT-CFM)</th><th>NFE</th><th>FID</th></tr></thead><tbody><tr><td>RK4</td><td>40</td><td>4.34</td></tr><tr><td>RK4 + score (1 call)</td><td>41</td><td class="best">3.45</td></tr><tr><td>RK4 + classifier (1 call)</td><td>42</td><td class="best">3.57</td></tr><tr><td>RK4 + score (3 calls)</td><td>43</td><td class="best">3.38</td></tr><tr><td>RK4</td><td>44</td><td>3.96</td></tr><tr><td>RK4 + classifier (3 calls)</td><td>46</td><td class="best">3.48</td></tr><tr><td>RK4</td><td>48</td><td>3.73</td></tr><tr><td>RK4 + score (11 calls)</td><td>51</td><td class="best">3.37</td></tr><tr><td>RK4</td><td>52</td><td>3.59</td></tr><tr><td>RK4</td><td>60</td><td>3.47</td></tr><tr><td>Adaptive (DOPRI5)</td><td>~134</td><td>3.58</td></tr></tbody></table></div>
+      <p><strong>ImageNet-64.</strong> The sampler budget here is much smaller.</p>
+      <div class="table-wrap"><table class="results"><thead><tr><th>Sampler (OT-CFM)</th><th>NFE</th><th>FID</th></tr></thead><tbody><tr><td>RK4</td><td>20</td><td>17.99</td></tr><tr><td>RK4 + score (1 call)</td><td>21</td><td class="best">15.91</td></tr><tr><td>RK4 + score (2 calls)</td><td>22</td><td class="best">15.53</td></tr><tr><td>RK4</td><td>24</td><td>16.60</td></tr><tr><td>RK4</td><td>28</td><td>15.71</td></tr><tr><td>OT-FM, adaptive (prior work)</td><td>138</td><td>14.45</td></tr></tbody></table></div>
+      <p class="note">From our paper. Lower is better. A classifier call costs 2 NFE. Corrector networks have half the parameters of the flow, so counting each call as a full NFE is conservative.</p>
+      <p>On ImageNet-64, adding <strong>two</strong> correction evaluations to a 20-NFE sampler (FID 15.53) beats adding eight more ordinary solver evaluations (15.71). On CIFAR-10, the score model is consistent across two base flows (OT-CFM and I-CFM), while the classifier works better with OT-CFM.</p>
+      <figure><img src="../../assets/flows/correction.jpeg" alt="Baseline samples beside corrected samples and difference images." loading="lazy" /><figcaption><strong>From our paper.</strong> Baseline OT-CFM samples, corrected samples, and the difference between them. Corrections sharpen images and sometimes change their structure.</figcaption></figure>
+
+      <h2 id="s7">7. What the ablations show</h2>
+      <ul class="plain">
+        <li><strong>Backward versus interpolated targets.</strong> With one or three corrections the two targets are close, at FID 3.45 vs. about 3.52 and 3.38 vs. about 3.44, so much of the gain comes from having a corrector at all. The clear difference appears with a correction at every step: the backward corrector holds at 3.37, while the interpolated one worsens to about 4.15.</li>
+        <li><strong>One step beats Langevin.</strong> Multi-step Langevin dynamics (50 or 100 steps) was both more expensive and worse than a single correction step.</li>
+        <li><strong>Timing depends on the corrector.</strong> The score model helps mostly at the middle and final steps, while the classifier improves more uniformly.</li>
+        <li><strong>Early versus late.</strong> Early corrections mainly affect overall structure, and late ones affect fine detail and residual noise.</li>
+      </ul>
+      <figure><img src="../../assets/flows/fid.png" alt="FID for backward and interpolated score correction across correction schedules." loading="lazy" /><figcaption><strong>From our paper.</strong> CIFAR-10 FID for a score corrector trained on backward versus interpolated marginals, with corrections at step 10, at steps 0, 5 and 10, or at every step.</figcaption></figure>
+
+      <h2 id="eval">8. How to read these results</h2>
+      <ul class="plain">
+        <li><strong>Small FID gaps need caution.</strong> Results are point estimates with no reported seed variation, so differences such as 3.45 vs. 3.38 should not be over-read. The gap from 4.34 to about 3.4 is the main result.</li>
+        <li><strong>Training cost is not in NFE.</strong> NFE counts sampling only. The corrector needs backward trajectories and its own training, which pays off when a model will be sampled many times.</li>
+        <li><strong>More compute still wins eventually.</strong> On ImageNet-64, a prior OT-FM model with an adaptive solver reaches a lower FID (14.45 at 138 NFE) than our 22-NFE sampler. The method targets the low-budget regime.</li>
+        <li><strong>Tuned on FID.</strong> The noise level σ and the correction steps were chosen through FID ablations, so the best values are somewhat optimistic.</li>
+        <li><strong>Memorization.</strong> Backward marginals start from training data, so we also measured FID against the CIFAR-10 test set. One score call improves it from 6.43 to 5.52, better than plain RK4 at 52 NFE (5.70). FID remains a limited test of memorization.</li>
+      </ul>
+
+      <h2 id="prior">How this differs from prior work</h2>
+      <p>Classic predictor-correctors for diffusion (Song et al.; UniPC) reuse the same network and refine toward the model's own marginals. Song &amp; Lai propose a training-free corrector for flow models. Lezama et al. train a corrector for discrete diffusion. Reflow and distillation change or replace the generator. Marginal Matching keeps the flow frozen, trains a small dedicated corrector, and changes the <em>target</em> of correction to the reversed-ODE marginals.</p>
+
+      <h2 id="s8">9. Limitations and what comes next</h2>
+      <ul class="plain">
+        <li><strong>Reversibility is assumed.</strong> The method relies on an invertible flow, which we cannot verify in practice, so support comes from experiments.</li>
+        <li><strong>The bound uses unknown quantities.</strong> In practice we do not know the true error reduction at each step, and the classifier has no bound yet.</li>
+        <li><strong>An additional model must be trained,</strong> although it is smaller and cheaper than the flow.</li>
+        <li><strong>Code</strong> is planned for release upon publication.</li>
+        <li><strong>Next:</strong> approximately reversible models such as diffusion, and training the flow and corrector together.</li>
+      </ul>
+
+      <h2>Takeaways</h2>
+      <ul class="plain">
+        <li><strong>The correction target matters most when correcting often.</strong> The path your actual model needs differs from the path it was trained on, and repeated corrections toward the wrong path can undo the gain.</li>
+        <li><strong>Reversibility is a free source of training data</strong> for refining an ODE-based generator.</li>
+        <li><strong>A small post-hoc model can beat more solver steps,</strong> with no change to the original network.</li>
+      </ul>
+
+      <h2>Glossary</h2><details class="more"><summary>Show the glossary</summary><ul class="plain"><li><strong>Flow matching:</strong> training a network to predict the velocity that transports noise to data.</li><li><strong>Marginal:</strong> the distribution of samples at one moment in time.</li><li><strong>Backward marginal:</strong> the distribution obtained by running the learned flow in reverse from real data.</li><li><strong>Predictor-corrector:</strong> alternating between advancing in time and refining at the current time.</li><li><strong>NFE:</strong> number of function evaluations, the count of network calls during sampling.</li><li><strong>FID:</strong> Fréchet Inception Distance, a measure of image quality, where lower is better.</li><li><strong>Wasserstein distance:</strong> a measure of how far one distribution must be moved to match another.</li></ul></details>
+
+      <h2 id="cite">Citation</h2>
+      <details class="more"><summary>BibTeX</summary><pre class="bib">@article{bojan2026correcting,
+  title   = {Correcting Flows with Marginal Matching},
+  author  = {Bojan, Meital and Sellam, Nadav Bojan and Zisselman, Ev and Tamar, Aviv},
+  journal = {arXiv preprint arXiv:2611.23134},
+  year    = {2026}
+}</pre></details>
+
+      </article>
+    </main>
+
+    <footer>
+      <div class="wrap">
+        <a href="https://scholar.google.com/citations?user=3N-QKKYAAAAJ&amp;hl=en" target="_blank" rel="noreferrer">Google Scholar</a>
+        <a href="https://www.linkedin.com/in/nadav-bojan-sellam-611115277" target="_blank" rel="noreferrer">LinkedIn</a>
+        <p>© 2026 Nadav Bojan Sellam</p>
+      </div>
+    </footer>
+    <script src="../../paper-demos.js"></script>
+    <script>
+      marginalDemo({canvas:"c-canvas",err:"c-err",when:"c-when",t:"c-t",play:"c-play",read:"c-read"});
+      boundDemo({canvas:"w-canvas",l:"w-l",mode:"w-mode",val:"w-v",eps:"w-eps",epsVal:"w-ev",step:"w-step",stepVal:"w-sv",read:"w-read"});
+    </script>
+  </body>
+</html>

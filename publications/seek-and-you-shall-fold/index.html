@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Seek and You Shall Fold · Nadav Bojan Sellam</title>
+    <meta name="description" content="Gradient-free guidance of the BioEmu protein diffusion model with a genetic algorithm in latent space, tested on distance, NOE and NMR chemical shift objectives." />
+    <meta property="og:title" content="Seek and You Shall Fold · Nadav Bojan Sellam" />
+    <meta property="og:description" content="Gradient-free guidance of the BioEmu protein diffusion model with a genetic algorithm in latent space, tested on distance, NOE and NMR chemical shift objectives." />
+    <meta property="og:type" content="article" />
+    <link rel="stylesheet" href="../../style.css" />
+  </head>
+  <body>
+    <a class="skip" href="#main">Skip to content</a>
+    <header class="site">
+      <div class="wrap">
+        <a class="brand" href="../../">Nadav Bojan Sellam</a>
+        <nav aria-label="Primary">
+          <a href="../../#about">About</a>
+          <a href="../../cv/">CV</a>
+          <a href="../../publications/" aria-current="page">Publications</a>
+        </nav>
+      </div>
+    </header>
+
+    <main id="main" class="wrap narrow">
+      <a class="back" href="../">← All publications</a>
+      <article class="article">
+        <div class="badges"><span class="badge hot">MLSB @ EurIPS 2025</span></div>
+        <h1 style="margin-top:10px">Seek and You Shall Fold</h1>
+        <p class="authors"><span class="me">Nadav Bojan Sellam*</span>, Meital Bojan*, Paul Schanda, Alex M. Bronstein</p>
+        <p class="note">* Equal contribution.</p>
+        <div class="pl"><a href="https://arxiv.org/abs/2511.13244" target="_blank" rel="noreferrer">arXiv</a></div>
+        <nav class="series" aria-label="Research line"><p>Research line</p><ol><li><a href="../chroma-ensembles/"><strong>Ensembles from electron density</strong><span>2024 · Joint guidance on X-ray density</span></a></li><li><a href="../experiment-guided-alphafold/"><strong>Experiment-guided AlphaFold</strong><span>2025–26 · Stronger prior, more experimental observations</span></a></li><li class="now" aria-current="page"><strong>Seek and You Shall Fold</strong><span>2025 · Guidance without gradients</span></li></ol></nav>
+
+      <div class="callout"><strong>In short.</strong> Guiding a protein generator with experimental data normally requires gradients, but many of the best predictors of experimental signals are not differentiable. We replace the gradient with a <strong>genetic algorithm</strong> that searches the latent space of the BioEmu diffusion model and needs only a score. It recovered experimental folds from <strong>NOE</strong> restraints where AlphaFold3 misfolded them. To our knowledge, it is also the first proof of concept for guiding generation with <strong>NMR chemical shifts</strong>. There the score improved, but the structures did not converge to the experimental ensemble, which points to limits in current shift predictors and in the generator's reachable space.</div>
+      <dl class="spec"><dt>Problem</dt><dd>Optimize generated protein structures against black-box, non-differentiable experimental scores.</dd><dt>Prior</dt><dd>BioEmu, with its sampler made deterministic (probability-flow ODE) so that latents reconstruct exactly.</dd><dt>Method</dt><dd>A genetic algorithm with residue-wise latent mutations, no crossover, and an annealed perturbation time.</dd><dt>Evaluated on</dt><dd>One pairwise-distance target, five NOE targets, and two chemical-shift targets.</dd><dt>Main caveat</dt><dd>Scores are computed on the optimization objective, and there is no comparison with gradient guidance or other black-box optimizers.</dd><dt>My contribution</dt><dd>I designed the residue-wise latent mutation operator, which aims to keep samples near the generator's learned manifold during the genetic search.</dd></dl>
+      
+      <p class="note">Demos marked <span class="badge">Illustration</span> are small simulations of the idea and do not run our models. Results from the work itself are in the figures marked <strong>From our paper</strong> and in the charts and tables.</p>
+      <nav class="toc" aria-label="On this page"><a href="#s1">The problem</a><a href="#s2">Why gradients fail</a><a href="#s3">The idea</a><a href="#s4">The algorithm</a><a href="#s5">Distances</a><a href="#s6">NOE</a><a href="#s7">Chemical shifts</a><a href="#eval">Reading the results</a><a href="#s8">Limitations</a><a href="#cite">Cite</a></nav>
+
+      <h2 id="s1">1. The problem: useful signals with no gradient</h2>
+      <p>Generative models can produce realistic protein structures, but they do not automatically agree with what a specific experiment measured. A popular fix is <strong>guidance</strong>: at each denoising step, follow the gradient of a score measuring agreement with the data. Our work on <a href="../experiment-guided-alphafold/">experiment-guided AlphaFold</a> uses this approach.</p>
+      <p>That requires a differentiable path from structure to measurement. In NMR, the richest and most commonly measured signal is the <strong>chemical shift</strong>, the resonance frequency of a nucleus, which is highly sensitive to its local environment. Mature predictors such as UCBShift and SHIFTX2 estimate it from a structure, but they are not differentiable. So this signal has been very hard to use directly in structure generation.</p>
+
+      <h2 id="s2">2. Why not just approximate the gradient?</h2>
+      <p>One option is to build a differentiable surrogate for every predictor. Even when that is possible, gradient guidance has practical weaknesses:</p>
+      <ul class="plain">
+        <li>Every new observable needs its own differentiable model.</li>
+        <li>Gradients can be noisy or ill-conditioned, making convergence unstable.</li>
+        <li>Guidance strength must be tuned against a fixed diffusion schedule.</li>
+        <li>Samples can overfit noise and leave the manifold of valid proteins.</li>
+      </ul>
+
+      <h2 id="s3">3. The idea: evolve in the generator's latent space</h2>
+      <p>We treat the experiment as a <strong>black box</strong>: give it a structure, get back a number. The goal is to find</p>
+      <p style="text-align:center"><em>x* = argmax<sub>x</sub> S(x),&nbsp;&nbsp; x = G(z<sub>T</sub>, 0)</em></p>
+      <p>where <em>G</em> is the generator and <em>S</em> any scoring function. The generator is <strong>BioEmu</strong>, a lightweight diffusion model trained to produce thermodynamically plausible structures. Searching in its latent space, rather than moving atoms directly, is intended to keep candidates close to realistic proteins.</p>
+      <div class="demo"><h3>Try it: search without a gradient <span class="badge">Illustration</span></h3><p class="tagline">The heatmap is a score landscape built from flat steps, so its gradient is zero almost everywhere. The population starts on a lower peak. Each child changes one coordinate, like resampling one residue. With annealing, moves start broad and shrink over time. Turn it off to use one fixed, broad move size: the population can still escape, but it refines less well and reaches the top less often.</p><div class="ctrl"><label><input id="ga-anneal" type="checkbox" checked /> Anneal from global to local moves</label><button id="ga-run" type="button">Run</button><button id="ga-reset" type="button">New run</button></div><canvas id="ga-canvas" role="img" aria-label="A stepped score landscape with a population of points evolving toward the highest region." width="700" height="320"></canvas><div class="readout" aria-live="polite" id="ga-read"></div></div>
+
+      <h2 id="s4">4. A genetic algorithm built for proteins</h2>
+      <figure><img src="../../assets/seek/algo.png" alt="Loop of generator, scorer, selector and perturbation." loading="lazy" /><figcaption><strong>From our paper.</strong> Latents are perturbed and decoded with BioEmu, scored against experimental data, and evolved with a genetic algorithm.</figcaption></figure>
+      <p>A textbook genetic algorithm would break proteins, since small changes in the wrong place can produce nonphysical structures. We make three changes:</p>
+      <ul class="plain">
+        <li><strong>No crossover.</strong> Splicing two parents causes destabilizing global jumps.</li>
+        <li><strong>Residue-wise mutation in latent space.</strong> We take a parent partway back along the diffusion and resample the latent of <em>one randomly chosen residue</em>, as explained <a href="#mutation">below</a>.</li>
+        <li><strong>A perturbation-time schedule.</strong> The time <em>t<sub>k</sub></em> moves toward the clean end of the diffusion across generations, shifting from broad exploration to fine refinement, much like annealing in molecular dynamics. In most runs the diffusion index starts at 0 (pure noise), advances by one every 4 generations, and is capped at 40 of 50. The harder chemical-shift runs use a tuned version of this schedule.</li>
+      </ul>
+      <p>Each generation scores the population, keeps the best (<em>elites</em>), picks parents by tournament, and creates children. Unless noted otherwise, the search starts from an AlphaFold3 prediction. We used a population of 100, tournament size 5 and 5 elites, usually for 250 generations. A run took 1 to 3.5 hours on one H100 GPU with 30 CPU cores, excluding the slower chemical-shift runs.</p>
+      <h3 id="mutation" style="margin-top:24px;scroll-margin-top:96px">Inside the mutation operator</h3>
+      <p>A diffusion model defines a path of distributions <em>p<sub>t</sub></em> that connects pure noise to protein structures. Each mutation takes the parent <em>x</em> partway back along this path to a time <em>t</em>, then returns to a structure. It uses two routes back, which have different jobs:</p>
+      <ul class="plain">
+        <li><strong>1. Deterministic latent (ODE).</strong> Integrating BioEmu's probability-flow ODE backward gives <em>z<sub>t</sub> = G⁻¹(x, t)</em>. This latent remembers the parent: integrating forward again reconstructs <em>x</em>.</li>
+        <li><strong>2. Stochastic latent (SDE).</strong> Running the forward noising SDE from <em>x</em> to the same time gives <em>ẑ<sub>t</sub></em>. It contains fresh noise, so it decodes to a different structure. The noisier <em>t</em> is, the further that structure can move from the parent.</li>
+        <li><strong>3. Splice one residue.</strong> Choose a residue <em>a</em> uniformly at random and set <em>z<sub>t</sub>[a] ← ẑ<sub>t</sub>[a]</em>. Every other residue keeps its deterministic latent, so it still carries the parent's information.</li>
+        <li><strong>4. Decode.</strong> Integrate the ODE from <em>t</em> to 0 to get the child. The denoiser acts on the whole chain, so it can adjust the new residue and its neighbors together.</li>
+      </ul>
+      <div class="demo"><h3>Watch one mutation <span class="badge">Illustration</span></h3><p class="tagline">A toy 2-D chain under an exact Gaussian diffusion, not BioEmu. Each colored bar is a latent, with one cell per residue, and the chain beside it is the same latent drawn as a structure. Follow the red residue through both routes.</p><ol class="op-steps" id="op-steps"><li>Parent</li><li>Go back</li><li>Splice</li><li>Decode</li><li>Child</li></ol><div class="ctrl"><button id="op-play" type="button">Play</button><button id="op-next" type="button">Next step</button><button id="op-new" type="button">New mutation</button><label>Noise level <input id="op-t" type="range" min="20" max="90" value="60" /></label><label><input id="op-swap" type="checkbox" checked /> Swap the residue</label></div><canvas id="op-canvas" role="img" aria-label="Pipeline animation. A parent chain splits into a smooth ODE route and a jagged SDE route, each showing a noisy structure and a latent bar with one cell per residue. One cell is copied from the SDE bar to the ODE bar. Both latents are then decoded, comparing the real child with a decode of the whole SDE latent." width="700" height="532"></canvas><div class="readout" aria-live="polite" id="op-read"></div></div>
+      <div class="callout"><strong>Why this stays close to the manifold.</strong> Suppose the parent is a sample from the model's distribution <em>p₀</em>, and the score and solver are exact. Then the ODE and SDE latents are each distributed as <em>p<sub>t</sub></em>, so decoding either one gives a valid sample from the generator. Each residue of the spliced latent also has the correct marginal distribution.</div>
+      <p><strong>What this does not guarantee.</strong> The spliced latent combines coordinates from two different latents, so the correlations between residue <em>a</em> and the rest of the chain can differ from those of <em>p<sub>t</sub></em>. The child is therefore not an exact sample from the generator. Selection also moves parents away from <em>p₀</em>, and the learned score and numerical solver are approximate. We expect children to stay close because only one residue changes, the denoiser reconciles it with its neighbors, and the swap becomes smaller as the schedule approaches the clean end. We did not directly measure how local the changes are or how close children stay to the manifold.</p>
+
+      <h2 id="s5">5. Test 1: pairwise distances</h2>
+      <p>As a controlled warm-up, we used protein 4OLE, whose residues 60–68 (423–431 in the PDB's numbering) have two known conformations: a helix (A) and a strand (B). We derived Cα distance restraints from A and started the search from B. BioEmu alone resembles B and never reaches A. With guidance, the search <strong>recovered the helix</strong>.</p>
+      <figure><img src="../../assets/seek/pairwise.jpeg" alt="Reference structure, unguided samples and guided samples for 4OLE." loading="lazy" /><figcaption><strong>From our paper.</strong> Distance-guided generation on 4OLE. Without guidance, samples resemble conformation B. Guidance recovers the helical conformation A.</figcaption></figure>
+
+      <h2 id="s6">6. Test 2: real NOE restraints</h2>
+      <p>NOE signals indicate which protons are close in space. We scored structures with a non-differentiable metric: the fraction of violated restraints multiplied by their mean violation. On peptides 1DEC and 2LI3, AlphaFold3 contained misfolded regions and unguided BioEmu did not match the PDB, while the guided search reduced violations and recovered the experimental folds.</p>
+      <figure><img src="../../assets/seek/noe.png" alt="NOE-guided structures for peptides compared with reference structures." loading="lazy" /><figcaption><strong>From our paper.</strong> NOE-guided BioEmu on peptides 1DEC and 2LI3, with reference PDB structures in gray.</figcaption></figure>
+      <div class="table-wrap"><table class="results">
+        <thead><tr><th>Protein</th><th>PDB reference</th><th>AlphaFold3</th><th>Guided (best)</th></tr></thead>
+        <tbody>
+          <tr><td>1DEC</td><td>0.1279</td><td>1.0658</td><td class="best">0.1184</td></tr>
+          <tr><td>2KKZ</td><td class="best">0.1445</td><td>0.2836</td><td>0.1492</td></tr>
+          <tr><td>1PQX</td><td class="best">0.0429</td><td>0.1409</td><td>0.0594</td></tr>
+          <tr><td>2LI3</td><td>0.0259</td><td>1.1002</td><td class="best">0.0001</td></tr>
+          <tr><td>3BBG</td><td>0.3200</td><td>0.7224</td><td class="best">0.3180</td></tr>
+        </tbody>
+      </table></div>
+      <p class="note">From our paper. NOE loss = fraction violated × mean violation; lower is better. Best value in each row is highlighted.</p>
+      <p>Guidance beat the unguided AlphaFold3 prediction on all five targets, and was better than the PDB reference on three. The PDB reference remained better on 2KKZ (narrowly) and 1PQX.</p>
+
+      <h2 id="s7">7. Test 3: chemical shifts, and an honest negative result</h2>
+      <p>This was the hardest test. We scored structures with UCBShift, using Cα shifts only, in two settings: <em>synthetic</em> shifts for 1DEC (generated from its PDB structure by UCBShift itself, so an exact solution exists under the scorer) and <em>experimental</em> shifts for 1DFU.</p>
+      <figure><img src="../../assets/seek/shift.png" alt="Chemical-shift objective improving over optimization cycles for guided search while the unguided baseline stays flat." loading="lazy" /><figcaption><strong>From our paper.</strong> Synthetic-shift run on 1DEC. The axis shows negative mean absolute error, so higher is better. Guided search (blue) improves over about 1,700 generations, while unguided sampling stays flat.</figcaption></figure>
+      <p>The guided search consistently improved the score, with far more generations than the other objectives (1,700 for 1DEC and 600 for 1DFU) and some plateaus at late stages. <strong>But the structures did not converge to the experimental ensemble.</strong> A better chemical-shift score did not mean a more accurate structure.</p>
+      <p>That is a useful finding. Guidance acts as a stress test of the predictor: it actively searches for structures that the predictor likes, and here those were not the right structures. This matches earlier evidence that UCBShift predictions carry limited structural signal, and it motivates more physically grounded predictors such as the one in our <a href="../local-protein-environments/">force-field representations</a> work.</p>
+      <p>The predictor is not the only possible cause. In the synthetic 1DEC run, the PDB structure has zero error by construction, yet the search stopped at a mean absolute error of about 0.42 ppm. So BioEmu's reachable space and the search itself also limit the result, and this experiment does not separate the three.</p>
+
+      <h2 id="eval">8. How to read these results</h2>
+      <ul class="plain">
+        <li><strong>The reported metric is the objective.</strong> Table values are the best structure in the population under the same score used for selection. A near-zero loss, as for 2LI3, shows that the restraints are satisfied, and is not evidence of a more accurate structure than the PDB.</li>
+        <li><strong>Missing baselines.</strong> We compare with unguided BioEmu and AlphaFold3, but not with gradient guidance on differentiable objectives, random search, or optimizers such as CMA-ES. The value of the tailored operators over simpler search is therefore not yet isolated.</li>
+        <li><strong>Query cost.</strong> A 250-generation run with a population of 100 can use up to about 25,000 structure evaluations, so the method suits objectives where gradients are unavailable, not those where they are cheap.</li>
+        <li><strong>Small scale.</strong> This is a workshop proof of concept on a handful of targets, with experimental chemical shifts tested on one protein.</li>
+      </ul>
+
+      <h2 id="s8">9. Limitations and what comes next</h2>
+      <ul class="plain">
+        <li><strong>The generator limits the search.</strong> BioEmu constrains which conformations can be reached.</li>
+        <li><strong>The signal limits the result.</strong> Chemical-shift guidance is feasible, but it needs better predictors to produce accurate structures.</li>
+        <li><strong>Single best structures.</strong> We report the best structure in the population. Ensemble-level objectives are future work.</li>
+        <li><strong>Next:</strong> stronger priors, physically informed shift models, and other data such as cryo-EM and crosslinking.</li>
+      </ul>
+
+      <h2>Takeaways</h2>
+      <ul class="plain">
+        <li><strong>Guidance does not need gradients.</strong> A pretrained generator plus population search can improve black-box objectives, at a much higher query cost.</li>
+        <li><strong>Search where the data manifold is easy to stay on.</strong> Local edits in a generator's latent space are designed to keep candidates plausible.</li>
+        <li><strong>Optimizing against a predictor reveals its flaws.</strong> A high score is only as meaningful as the scorer.</li>
+      </ul>
+
+      <h2>Glossary</h2><details class="more"><summary>Show the glossary</summary><ul class="plain"><li><strong>BioEmu:</strong> a diffusion model that generates near-equilibrium protein structures.</li><li><strong>Genetic algorithm:</strong> a search that evolves a population through selection and mutation.</li><li><strong>Latent:</strong> the internal representation a generator decodes into a structure.</li><li><strong>NOE:</strong> an NMR effect indicating that two protons are close in space.</li><li><strong>Chemical shift:</strong> a nucleus's resonance frequency relative to a reference, sensitive to its local environment.</li><li><strong>Cα:</strong> the central backbone carbon of an amino acid.</li></ul></details>
+
+      <h2 id="cite">Citation</h2>
+      <details class="more"><summary>BibTeX</summary><pre class="bib">@article{sellam2025seek,
+  title   = {Seek and You Shall Fold},
+  author  = {Sellam, Nadav Bojan and Bojan, Meital and Schanda, Paul and Bronstein, Alex},
+  journal = {arXiv preprint arXiv:2511.13244},
+  year    = {2025}
+}</pre></details>
+
+      </article>
+    </main>
+
+    <footer>
+      <div class="wrap">
+        <a href="https://scholar.google.com/citations?user=3N-QKKYAAAAJ&amp;hl=en" target="_blank" rel="noreferrer">Google Scholar</a>
+        <a href="https://www.linkedin.com/in/nadav-bojan-sellam-611115277" target="_blank" rel="noreferrer">LinkedIn</a>
+        <p>© 2026 Nadav Bojan Sellam</p>
+      </div>
+    </footer>
+    <script src="../../paper-demos.js"></script>
+    <script>
+      geneticDemo({canvas:"ga-canvas",anneal:"ga-anneal",run:"ga-run",reset:"ga-reset",read:"ga-read"});
+      mutationDemo({canvas:"op-canvas",play:"op-play",next:"op-next",fresh:"op-new",noise:"op-t",swap:"op-swap",read:"op-read",steps:"op-steps"});
+    </script>
+  </body>
+</html>
