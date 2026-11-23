@@ -181,39 +181,6 @@
     ang.addEventListener("input", draw); dist.addEventListener("input", draw); window.addEventListener("resize", draw); draw();
   };
 
-  /* ---------- Kernel density in an embedding space ---------- */
-  var KC = [{ n: "helix", x: -1.5, y: 0.8, a: 0.55, b: 0.3, t: 0.5, c: NAVY }, { n: "strand", x: 1.5, y: 0.65, a: 0.5, b: 0.28, t: -0.6, c: GOLD }, { n: "turn", x: 0.05, y: -1.05, a: 0.6, b: 0.32, t: 0.1, c: GREEN }];
-  function kPts() { var r = seeded(321), o = []; KC.forEach(function (k, ci) { for (var i = 0; i < 90; i++) { var u = k.a * gauss(r), v = k.b * gauss(r); o.push({ x: k.x + u * Math.cos(k.t) - v * Math.sin(k.t), y: k.y + u * Math.sin(k.t) + v * Math.cos(k.t), k: ci }); } }); return o; }
-  Sims.kdeLog = function (pts, x, y, h, cls) { var s = 0, n = 0; pts.forEach(function (p) { if (cls !== undefined && p.k !== cls) return; var d = (p.x - x) * (p.x - x) + (p.y - y) * (p.y - y); s += Math.exp(-d / (2 * h * h)); n++; }); return Math.log(s / n + 1e-300); };
-  Sims.kdePoints = kPts;
-  window.kdeDemo = function (o) {
-    var cv = $(o.canvas), band = $(o.band), read = $(o.read), pts = kPts(), q = [0.1, 0.25], heat = null, hBand = -1, drag = false;
-    function makeHeat(h) {
-      var nx = 110, ny = 60; heat = document.createElement("canvas"); heat.width = nx; heat.height = ny; var g = heat.getContext("2d"), im = g.createImageData(nx, ny), vals = [], m = 0, i, j;
-      for (j = 0; j < ny; j++) for (i = 0; i < nx; i++) { var v = Math.exp(Sims.kdeLog(pts, -3.3 + 6.6 * i / (nx - 1), 1.8 - 3.6 * j / (ny - 1), h)); vals.push(v); if (v > m) m = v; }
-      for (j = 0; j < ny * nx; j++) { var w = Math.sqrt(vals[j] / m), k = j * 4; im.data[k] = 255 + (120 - 255) * w; im.data[k + 1] = 255 + (150 - 255) * w; im.data[k + 2] = 255 + (205 - 255) * w; im.data[k + 3] = 255; }
-      g.putImageData(im, 0, 0); hBand = h;
-    }
-    function draw() {
-      var h = +band.value / 100, s = setup(cv, 0.54), c = s.c, W = s.w, H = s.h; if (hBand !== h) makeHeat(h);
-      c.imageSmoothingEnabled = true; c.drawImage(heat, 0, 0, W, H);
-      function X(v) { return (v + 3.3) / 6.6 * W; } function Y(v) { return (1.8 - v) / 3.6 * H; }
-      pts.forEach(function (p) { dot(c, X(p.x), Y(p.y), 1.8, KC[p.k].c); });
-      KC.forEach(function (k) { label(c, k.n, X(k.x), Y(k.y) - 46, k.c === GOLD ? DGOLD : k.c, 13, "center"); });
-      c.beginPath(); c.arc(X(q[0]), Y(q[1]), 8, 0, 6.3); c.fillStyle = "#fff"; c.fill(); c.strokeStyle = RED; c.lineWidth = 3; c.stroke();
-      label(c, "drag the marker or use arrow keys", W - 10, H - 9, MUT, 12, "right");
-      var ls = KC.map(function (k, i) { return Sims.kdeLog(pts, q[0], q[1], h, i); }), b = ls.indexOf(Math.max.apply(null, ls)), all = Sims.kdeLog(pts, q[0], q[1], h);
-      read.innerHTML = "log-likelihood <strong>" + (all < -99 ? "below −99" : all.toFixed(1).replace("-", "−")) + "</strong>. Closest class: <strong>" + KC[b].n + "</strong>. " + (all > -2.5 ? "This environment looks typical." : all > -8 ? "This environment is unusual." : "This environment is far from the reference set, so a prediction here deserves less trust.");
-    }
-    function move(e) { var r = cv.getBoundingClientRect(); q = [(e.clientX - r.left) / r.width * 6.6 - 3.3, 1.8 - (e.clientY - r.top) / r.height * 3.6]; draw(); }
-    cv.style.touchAction = "none"; cv.style.cursor = "grab"; cv.tabIndex = 0;
-    cv.addEventListener("keydown", function (e) { var d = { ArrowLeft: [-0.1, 0], ArrowRight: [0.1, 0], ArrowUp: [0, 0.1], ArrowDown: [0, -0.1] }[e.key]; if (!d) return; e.preventDefault(); q = [Math.max(-3.3, Math.min(3.3, q[0] + d[0])), Math.max(-1.8, Math.min(1.8, q[1] + d[1]))]; draw(); });
-    cv.addEventListener("pointerdown", function (e) { drag = true; cv.setPointerCapture(e.pointerId); move(e); });
-    cv.addEventListener("pointermove", function (e) { if (drag) move(e); });
-    cv.addEventListener("pointerup", function () { drag = false; });
-    band.addEventListener("input", draw); window.addEventListener("resize", draw); draw();
-  };
-
   /* ---------- Marginal matching on a 2-D flow ---------- */
   var MODES = [], MS = 0.16; (function () { for (var i = 0; i < 8; i++) MODES.push([3 * Math.cos(i * Math.PI / 4), 3 * Math.sin(i * Math.PI / 4)]); })();
   function vel(x, y, t, err) {

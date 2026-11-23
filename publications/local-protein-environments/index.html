@@ -33,10 +33,10 @@
         <div class="pl"><a href="https://openreview.net/forum?id=9ZogcRkhoG" target="_blank" rel="noreferrer">OpenReview</a><a href="https://arxiv.org/abs/2505.23354" target="_blank" rel="noreferrer">arXiv</a><a href="https://github.com/mb012/MLFF_representation" target="_blank" rel="noreferrer">Code</a></div>
 
       <div class="callout"><strong>In short.</strong> Machine learning force fields (MLFFs) are trained on small-molecule quantum chemistry to predict energies and forces. We show that their <strong>internal features</strong> also make a strong, reusable description of <strong>local environments in proteins</strong>, with no protein-specific training of the force field. These features organize by structure and chemistry, give the lowest pKa errors against a computational reference, and power an NMR <strong>chemical shift predictor</strong> that outperforms UCBShift2-X on every atom type except Hα, along with a confidence score.</div>
-      <dl class="spec"><dt>Problem</dt><dd>Learn a reusable representation of the local chemical environment of a protein residue.</dd><dt>Representation</dt><dd>Frozen per-atom embeddings from pretrained force fields (MACE, Egret, OrbNet, AIMNet).</dd><dt>Method</dt><dd>Crop a 5 Å environment, embed it, then use unsupervised analysis, small GNNs, or kernel density estimates.</dd><dt>Evaluated on</dt><dd>About 165K environments, split by sequence cluster (823 train and 225 test proteins).</dd><dt>Main caveat</dt><dd>Inputs are AlphaFold2-predicted structures, and the main pKa benchmark uses simulated labels.</dd><dt>My contribution</dt><dd>I analyzed the embedding geometry, built zero-shot predictors from it, and compared how well different layers transfer.</dd></dl>
+      <dl class="spec"><dt>Problem</dt><dd>Learn a reusable representation of the local chemical environment of a protein residue.</dd><dt>Representation</dt><dd>Frozen per-atom embeddings from pretrained force fields (MACE, Egret, OrbNet, AIMNet).</dd><dt>Method</dt><dd>Crop a 5 Å environment, embed it, then use unsupervised analysis or small GNNs.</dd><dt>Evaluated on</dt><dd>About 165K environments, split by sequence cluster (823 train and 225 test proteins).</dd><dt>Main caveat</dt><dd>Inputs are AlphaFold2-predicted structures, and the main pKa benchmark uses simulated labels.</dd><dt>My contribution</dt><dd>I analyzed the embedding geometry, built zero-shot predictors from it, and compared how well different layers transfer.</dd></dl>
       
       <p class="note">Demos marked <span class="badge">Illustration</span> are small simulations of the idea and do not run our models. Results from the work itself are in the figures marked <strong>From our paper</strong> and in the charts and tables.</p>
-      <nav class="toc" aria-label="On this page"><a href="#s1">The problem</a><a href="#s2">Force fields</a><a href="#s3">Descriptors</a><a href="#s4">What they encode</a><a href="#s5">pKa</a><a href="#s6">Likelihoods</a><a href="#s7">Chemical shifts</a><a href="#inside">Inside the embedding</a><a href="#s8">Limitations</a><a href="#cite">Code &amp; cite</a></nav>
+      <nav class="toc" aria-label="On this page"><a href="#s1">The problem</a><a href="#s2">Force fields</a><a href="#s3">Descriptors</a><a href="#s4">What they encode</a><a href="#s5">pKa</a><a href="#s6">Chemical shifts</a><a href="#inside">Inside the embedding</a><a href="#s7">Limitations</a><a href="#cite">Code &amp; cite</a></nav>
 
       <h2>One project, two venues</h2>
       <ul class="timeline">
@@ -86,21 +86,15 @@
       <div class="table-wrap"><table class="results"><thead><tr><th>Residue</th><th>pKa-ANI</th><th>Ours (MACE)</th></tr></thead><tbody><tr><td>Glutamic acid</td><td>0.696</td><td class="best">0.695</td></tr><tr><td>Aspartic acid</td><td>0.978</td><td class="best">0.831</td></tr><tr><td>Lysine</td><td>0.648</td><td class="best">0.360</td></tr><tr><td>Histidine</td><td class="best">0.899</td><td>0.925</td></tr></tbody></table></div>
       <p class="note">From our paper. Mean absolute error against experimental values; lower is better. Glutamic acid is effectively a tie, and histidine has few training examples.</p>
 
-      <h2 id="s6">6. A likelihood over protein environments</h2>
-      <p>If the embedding space is meaningful, distance in it should mean something. We define how typical an environment is using kernel density estimation over a reference set:</p>
-      <p style="text-align:center"><em>p(𝒳<sub>a</sub>) = (1 / |E<sub>ref</sub>|) Σ exp(−‖f<sub>θ</sub>(𝒳<sub>a</sub>) − f<sub>θ</sub>(𝒳′)‖² / 2σ²)</em></p>
-      <p>This score is sensitive to subtle changes: structures relaxed with a force field consistently receive higher likelihoods than the same structures before relaxation. Restricting the reference set gives conditional likelihoods, such as "how helix-like is this environment?", which separate secondary structures clearly with no trained prediction head.</p>
-      <div class="demo"><h3>Try it: how typical is this environment? <span class="badge">Illustration</span></h3><p class="tagline">A 2-D cartoon of the embedding space, with reference environments from three classes. Drag the red marker to see its likelihood under the same kernel formula. The bandwidth σ controls how far each reference point reaches.</p><div class="ctrl"><label>Bandwidth σ <input id="k-band" type="range" min="12" max="70" value="30" /></label></div><canvas id="k-canvas" role="img" aria-label="A two-dimensional map of three clusters of protein environments with a draggable query point and a density heatmap." width="700" height="320"></canvas><div class="readout" aria-live="polite" id="k-read"></div></div>
-
-      <h2 id="s7">7. Case study: chemical shifts you can trust</h2>
+      <h2 id="s6">6. Case study: chemical shifts you can trust</h2>
       <p>NMR chemical shifts are extremely sensitive to the local environment, which makes them a natural application. We trained graph networks on frozen MLFF features to predict shifts for backbone atoms (N, Cα, C, H, Hα) and side-chain carbons. On a test set of <strong>203 records</strong> with experimental shifts, the MACE-based predictor outperformed the state-of-the-art <strong>UCBShift2-X</strong> on every atom type except Hα.</p>
       <div class="table-wrap"><table class="results"><thead><tr><th>Atom</th><th>UCBShift2-X</th><th>Ours (MACE)</th><th>Improvement</th></tr></thead><tbody><tr><td>H</td><td>0.324</td><td class="best">0.300</td><td>7%</td></tr><tr><td>Hα</td><td class="best">0.165</td><td>0.180</td><td>−9%</td></tr><tr><td>N</td><td>1.891</td><td class="best">1.642</td><td>13%</td></tr><tr><td>Cα</td><td>0.653</td><td class="best">0.584</td><td>11%</td></tr><tr><td>Cβ</td><td>0.758</td><td class="best">0.716</td><td>6%</td></tr><tr><td>C</td><td>0.827</td><td class="best">0.744</td><td>10%</td></tr><tr><td>Cγ</td><td>0.595</td><td class="best">0.567</td><td>5%</td></tr><tr><td>Cδ</td><td>0.615</td><td class="best">0.456</td><td>26%</td></tr><tr><td>Cε</td><td>0.519</td><td class="best">0.447</td><td>14%</td></tr></tbody></table></div>
       <p class="note">From our paper. Mean absolute error in ppm against experimental RefDB shifts; lower is better. Selected atoms.</p>
       <p><strong>Does it follow the physics?</strong> An aromatic ring in a magnetic field carries a current that shifts nearby nuclei. A phenylalanine ring is symmetric, so rotating it by 180° must give the same result, and the effect should fade with distance. We rotated a ring synthetically and tracked predictions. Our model showed the expected 180° periodicity and smooth decay, becoming negligible past about 7 Å. UCBShift2-X extended its influence beyond 20 Å and did not reproduce that smooth periodic behavior.</p>
       <figure><img src="../../assets/lpe/ring.png" alt="A phenylalanine ring rotated in a protein. Maps compare how far the predicted Cα shift changes spread for MACE and UCBShift-X, and curves show predicted shifts of three nearby Cα atoms against ring orientation." loading="lazy" /><figcaption><strong>From our paper.</strong> Rotating the phenylalanine ring at residue 50 of PDB 1ZV6. (A) Size of the resulting change in backbone Cα shifts, with a 7 Å sphere around the ring. The MACE-based predictor's effect fades near the sphere, while UCBShift-X predicts small changes well beyond it. (B) The ring orientations and the three nearby Cα atoms. (C) Predicted shifts of those atoms against ring orientation. The MACE curves are smooth and repeat every 180°.</figcaption></figure>
-      <p><strong>Knowing when not to trust it.</strong> The likelihood from section 6 doubles as a confidence score: environments with lower likelihood have larger shift errors. To our knowledge, this is the first such confidence score for chemical shift prediction.</p>
+      <p><strong>Knowing when not to trust it.</strong> A kernel density estimate over the embedding space doubles as a confidence score: environments with lower likelihood have larger shift errors. To our knowledge, this is the first such confidence score for chemical shift prediction.</p>
 
-      <h2 id="inside">8. Looking inside the representation</h2>
+      <h2 id="inside">7. Looking inside the representation</h2>
       <p>Benchmarks show that the embeddings are useful, but not what they encode. We probed that directly:</p>
       <ul class="plain">
         <li><strong>Geometry mirrors physics.</strong> As a phenylalanine ring rotates, the top two principal components of nearby Cα embeddings trace a smooth one-dimensional curve with almost perfect 180° periodicity. The structure weakens with distance and disappears for a residue the ring does not influence.</li>
@@ -109,7 +103,7 @@
         <li><strong>Can embeddings be inverted?</strong> Optimizing coordinates to match a target embedding, or guiding AlphaFold3 with it, partly recovers the underlying conformation. This suggests that the features retain much of the local geometry.</li>
       </ul>
 
-      <h2 id="s8">9. Limitations and what comes next</h2>
+      <h2 id="s7">8. Limitations and what comes next</h2>
       <ul class="plain">
         <li><strong>Predicted input structures.</strong> Environments come from relaxed AlphaFold2 models, so errors in those models propagate to the features and predictions.</li>
         <li><strong>Frozen features.</strong> We did not fine-tune the force fields, which may yield further gains.</li>
@@ -121,7 +115,7 @@
       <h2>Takeaways</h2>
       <ul class="plain">
         <li><strong>Models trained on physics are good representation learners.</strong> Features learned from small-molecule energies transfer to proteins.</li>
-        <li><strong>A structured embedding space gives more than accuracy:</strong> similarity, likelihoods and uncertainty come almost for free.</li>
+        <li><strong>A structured embedding space gives more than accuracy:</strong> similarity and uncertainty come almost for free.</li>
         <li><strong>Test against known physics.</strong> Symmetry and decay checks can reveal what benchmark error cannot.</li>
       </ul>
 
@@ -149,9 +143,5 @@
         <p>© 2026 Nadav Bojan Sellam</p>
       </div>
     </footer>
-    <script src="../../paper-demos.js"></script>
-    <script>
-      kdeDemo({canvas:"k-canvas",band:"k-band",read:"k-read"});
-    </script>
   </body>
 </html>
